@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineTrack - Ton journal de films</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Theme Toggle-->
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon">🌙</span>
+    </button> 
+
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">🎬 CineTrack</div>
+            <ul class="nav-links">
+                <li><a href="#" id="navFilms">Films</a></li>
+                <li><a href="#" id="navWatchlist">Watchlist</a></li>
+                <li><a href="#" id="navWatched">Films vus</a></li>
+                <li><a href="#" id="navProfile">Profil</a></li>
+                <li><a href="#" id="navFeed">Feed</a></li>
+            </ul>
+            <div id="authButtons">
+                <button class="btn-secondary" id="loginBtn">Connexion</button>
+                <button class="btn" id="registerBtn">Inscription</button>
+            </div>
+            <div id="userMenu" style="display: none;">
+                <span id="usernameDisplay"></span>
+                <button class="btn-secondary" id="logoutBtn">Déconnexion</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Section Recherche -->
+        <section class="search-section" id="searchSection">
+            <div class="container">
+                <h1>Découvre et note tes films préférés</h1>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Rechercher un film...">
+                    <button class="btn" id="searchBtn">Rechercher</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Films -->
+        <section class="movies-section" id="moviesSection">
+            <div class="container">
+                <h2 class="section-title">Films populaires</h2>
+                <div id="moviesGrid" class="movies-grid">
+                    <div class="loading">Chargement des films...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Watchlist -->
+        <section class="movies-section" id="watchlistSection" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">Ma Watchlist</h2>
+                <div id="watchlistGrid" class="movies-grid">
+                    <div class="loading">Chargement...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Films Vus -->
+        <section class="movies-section" id="watchedSection" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">Films vus</h2>
+                <div id="watchedGrid" class="movies-grid">
+                    <div class="loading">Chargement...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Profil -->
+        <section class="profile-section" id="profileSection" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">Mon Profil</h2>
+                <div class="profile-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statRated">0</div>
+                            <div class="stat-label">Films notés</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statAverage">0</div>
+                            <div class="stat-label">Note moyenne</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statReviews">0</div>
+                            <div class="stat-label">Critiques</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statWatchlist">0</div>
+                            <div class="stat-label">À voir</div>
+                        </div>
+                    </div>
+
+                    <!-- Graphiques -->
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <h3>Répartition des notes</h3>
+                            <canvas id="ratingsChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Activité mensuelle</h3>
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="recent-reviews">
+                        <h3>Mes dernières critiques</h3>
+                        <div id="userReviewsList"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Feed -->
+        <section class="feed-section" id="feedSection" style="display: none;">
+            <div class="container">
+                <h2 class="section-title">Critiques récentes</h2>
+                <div id="feedList" class="feed-list">
+                    <div class="loading">Chargement...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Authentification -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeAuthModal">&times;</button>
+            <h2 id="authModalTitle">Connexion</h2>
+            
+            <form id="authForm">
+                <div class="form-group" id="usernameGroup" style="display: none;">
+                    <label for="authUsername">Nom d'utilisateur</label>
+                    <input type="text" id="authUsername" placeholder="Ton pseudo">
+                </div>
+                <div class="form-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" placeholder="ton@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Mot de passe</label>
+                    <input type="password" id="authPassword" placeholder="••••••" required>
+                </div>
+                <div id="authError" class="error" style="display: none;"></div>
+                <button type="submit" class="btn btn-full" id="authSubmitBtn">Se connecter</button>
+            </form>
+            
+            <div class="auth-switch">
+                <span id="authSwitchText">Pas encore de compte ?</span>
+                <a href="#" id="authSwitchLink">S'inscrire</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Détails Film -->
+    <div id="movieModal" class="modal">
+        <div class="modal-content modal-large">
+            <button class="close-modal" id="closeMovieModal">&times;</button>
+            <div id="movieDetails"></div>
+        </div>
+    </div>
+
+    <!-- Modal Critique -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeReviewModal">&times;</button>
+            <h2>Écrire une critique</h2>
+            <form id="reviewForm">
+                <input type="hidden" id="reviewMovieId">
+                <input type="hidden" id="reviewMovieTitle">
+                <div class="form-group">
+                    <label for="reviewContent">Ta critique</label>
+                    <textarea id="reviewContent" rows="6" placeholder="Partage ton avis sur ce film..." required></textarea>
+                </div>
+                <div id="reviewError" class="error" style="display: none;"></div>
+                <button type="submit" class="btn btn-full">Publier</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
