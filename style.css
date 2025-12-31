@@ -932,45 +932,268 @@ nav {
     background: rgba(68, 85, 102, 0.8);
 }
 
-/* ==================== RESPONSIVE ==================== */
+/* ==================== MOBILE NAVIGATION ==================== */
 
 @media (max-width: 768px) {
+    body {
+        padding-bottom: 80px;
+    }
+
+    header {
+        padding: 12px 0;
+    }
+
+    nav {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        font-size: 22px;
+    }
+
+    /* Masquer la navigation principale sur mobile */
+    .nav-links {
+        display: none;
+    }
+
+    /* Boutons d'auth compacts en haut à droite */
+    #authButtons {
+        gap: 6px;
+    }
+
+    #authButtons .btn,
+    #authButtons .btn-secondary {
+        padding: 8px 14px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+
+    #userMenu {
+        padding: 6px 12px;
+        gap: 10px;
+        font-size: 13px;
+    }
+
+    #usernameDisplay {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #userMenu .btn-secondary {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    /* Navigation mobile en bas */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-elevated);
+        border-top: 1px solid rgba(68, 85, 102, 0.3);
+        padding: 8px 0;
+        z-index: 100;
+        box-shadow: 0 -4px 12px var(--shadow);
+        backdrop-filter: blur(10px);
+    }
+
+    .mobile-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .mobile-nav-item.active {
+        color: var(--primary);
+    }
+
+    .mobile-nav-item.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 3px;
+        background: var(--primary);
+        border-radius: 0 0 3px 3px;
+    }
+
+    .mobile-nav-icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+        transition: transform 0.3s ease;
+    }
+
+    .mobile-nav-item:active .mobile-nav-icon {
+        transform: scale(0.9);
+    }
+
+    .mobile-nav-item.active .mobile-nav-icon {
+        transform: scale(1.1);
+    }
+
+    .mobile-nav-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    /* Cacher le toggle theme sur mobile car il prend de la place */
+    .theme-toggle {
+        bottom: 90px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    /* Ajustements généraux */
+    .search-section {
+        padding: 40px 0 30px;
+    }
+
     .search-section h1 {
-        font-size: 32px;
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+
+    .search-box {
+        flex-direction: column;
+    }
+
+    .search-box input {
+        padding: 14px 18px;
     }
 
     .movies-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 20px;
+        gap: 16px;
+    }
+
+    .movie-card {
+        border-radius: 12px;
+    }
+
+    .movie-info {
+        padding: 12px;
+    }
+
+    .movie-title {
+        font-size: 13px;
+    }
+
+    .movie-year {
+        font-size: 11px;
+    }
+
+    .rating {
+        gap: 2px;
+        margin-top: 8px;
+    }
+
+    .star {
+        font-size: 16px;
     }
 
     .movie-details-grid {
         grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .movie-details-poster {
+        max-width: 200px;
+        margin: 0 auto;
+    }
+
+    .movie-details-info h2 {
+        font-size: 24px;
+    }
+
+    .movie-actions {
+        flex-direction: column;
+    }
+
+    .movie-actions .btn,
+    .movie-actions .btn-secondary {
+        width: 100%;
     }
 
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
     }
 
-    nav {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .nav-links {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .modal-content {
-        padding: 28px;
-    }
-
-    .section-title {
-        font-size: 24px;
+    .stat-card {
+        padding: 20px;
     }
 
     .stat-value {
-        font-size: 42px;
+        font-size: 36px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    .charts-section {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .chart-container {
+        padding: 20px;
+    }
+
+    .modal-content {
+        padding: 24px;
+        margin: 20px;
+    }
+
+    .modal h2 {
+        font-size: 22px;
+    }
+
+    .section-title {
+        font-size: 22px;
+    }
+
+    .review-card {
+        padding: 20px;
+    }
+
+    .review-movie {
+        font-size: 18px;
+    }
+
+    .genre-badges {
+        gap: 6px;
+    }
+
+    .genre-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+}
+
+/* Navigation mobile - Desktop (masquer) */
+@media (min-width: 769px) {
+    .mobile-nav {
+        display: none;
     }
 }

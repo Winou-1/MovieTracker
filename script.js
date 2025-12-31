@@ -1,3 +1,4 @@
+
 // script.js - Logique Frontend améliorée pour CineTrack
 
 // ==================== CONFIGURATION ====================
@@ -738,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('authForm').addEventListener('submit', handleAuth);
 
-    // Navigation
+    // Navigation Desktop
     document.getElementById('navFilms').addEventListener('click', (e) => {
         e.preventDefault();
         switchView('movies');
@@ -769,6 +770,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('navFeed').addEventListener('click', (e) => {
         e.preventDefault();
+        switchView('feed');
+    });
+
+    // Navigation Mobile
+    document.getElementById('mobileNavFilms').addEventListener('click', (e) => {
+        e.preventDefault();
+        updateMobileNav('mobileNavFilms');
+        switchView('movies');
+    });
+    document.getElementById('mobileNavWatchlist').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!getToken()) {
+            openAuthModal(true);
+        } else {
+            updateMobileNav('mobileNavWatchlist');
+            switchView('watchlist');
+        }
+    });
+    document.getElementById('mobileNavWatched').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!getToken()) {
+            openAuthModal(true);
+        } else {
+            updateMobileNav('mobileNavWatched');
+            switchView('watched');
+        }
+    });
+    document.getElementById('mobileNavProfile').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!getToken()) {
+            openAuthModal(true);
+        } else {
+            updateMobileNav('mobileNavProfile');
+            switchView('profile');
+        }
+    });
+    document.getElementById('mobileNavFeed').addEventListener('click', (e) => {
+        e.preventDefault();
+        updateMobileNav('mobileNavFeed');
         switchView('feed');
     });
 
@@ -815,3 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPopularMovies();
     updateUI();
 });
+
+// Fonction pour mettre à jour la navigation mobile active
+function updateMobileNav(activeId) {
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.getElementById(activeId).classList.add('active');
+}
