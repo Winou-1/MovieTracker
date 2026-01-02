@@ -415,13 +415,13 @@ async function showMovieDetails(movieId) {
                     ${genreBadges ? `<div class="genre-badges">${genreBadges}</div>` : ''}
                     <div class="movie-actions">
                         ${getToken() ? `
-                            <button class="btn btn-small" onclick="event.stopPropagation(); openReviewModal(${movieId}, '${movie.title.replace(/'/g, "\\'")}')">
+                            <button type="button" class="btn btn-small"  onclick="event.stopPropagation(); openReviewModal(${movieId}, '${movie.title.replace(/'/g, "\\'")}')">
                                 ✏️ Écrire une critique
                             </button>
-                            <button class="btn-secondary btn-small" id="watchlist-btn-${movieId}" onclick="event.stopPropagation(); toggleWatchlist(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                            <button type="button" class="btn-secondary btn-small" id="watchlist-btn-${movieId}" onclick="event.stopPropagation(); toggleWatchlist(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
                                 ${inWatchlist ? '✓ Dans ma watchlist' : '+ Ajouter à la watchlist'}
                             </button>
-                            <button class="btn-secondary btn-small" id="watched-btn-${movieId}" onclick="event.stopPropagation(); toggleWatched(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                            <button type="button" class="btn-secondary btn-small" id="watched-btn-${movieId}" onclick="event.stopPropagation(); toggleWatched(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
                                 ${isWatched ? '✓ Déjà vu' : '👁️ Marquer comme vu'}
                             </button>
                         ` : ''}
@@ -439,6 +439,11 @@ async function showMovieDetails(movieId) {
         console.error('Erreur:', error);
     }
 }
+
+document.getElementById('movieDetailsForm')?.addEventListener('submit', e => {
+    e.preventDefault();
+});
+
 
 // ==================== WATCHLIST ====================
 
@@ -761,6 +766,18 @@ function createRatingsChart(ratings) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
+const movieModal = document.getElementById('movieModal');
+
+movieModal.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+document.querySelectorAll('a[href="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+    });
+});
+
 
     // Theme toggle
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
