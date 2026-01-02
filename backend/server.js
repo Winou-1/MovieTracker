@@ -299,6 +299,10 @@ app.post('/api/watchlist', authenticateToken, (req, res) => {
     const { movie_id, movie_title, movie_poster } = req.body;
     const user_id = req.user.id;
 
+    if (!movie_id || !movie_title) {
+        return res.status(400).json({ error: 'Données invalides' });
+    }
+
     db.run(
         'INSERT OR IGNORE INTO watchlist (user_id, movie_id, movie_title, movie_poster) VALUES (?, ?, ?, ?)',
         [user_id, movie_id, movie_title, movie_poster],
@@ -372,19 +376,24 @@ app.get('/api/stats', authenticateToken, (req, res) => {
 
 // ==================== ROUTES WATCHED (FILMS VUS) ====================
 
-// Ajouter à la liste des films vus
+// Ajouter aux films vus
 app.post('/api/watched', authenticateToken, (req, res) => {
     const { movie_id, movie_title, movie_poster } = req.body;
     const user_id = req.user.id;
+
+    if (!movie_id || !movie_title) {
+        return res.status(400).json({ error: 'Informations du film manquantes' });
+    }
 
     db.run(
         'INSERT OR IGNORE INTO watched (user_id, movie_id, movie_title, movie_poster) VALUES (?, ?, ?, ?)',
         [user_id, movie_id, movie_title, movie_poster],
         function(err) {
             if (err) {
-                return res.status(500).json({ error: 'Erreur lors de l\'ajout' });
+                console.error("Erreur SQL:", err);
+                return res.status(500).json({ error: 'Erreur serveur lors de l\'ajout' });
             }
-            res.json({ message: 'Film ajouté aux films vus' });
+            res.json({ message: 'Film marqué comme vu', id: this.lastID });
         }
     );
 });
@@ -396,6 +405,7 @@ app.get('/api/watched', authenticateToken, (req, res) => {
         [req.user.id],
         (err, watched) => {
             if (err) {
+                console.error("Erreur SQL:", err);
                 return res.status(500).json({ error: 'Erreur serveur' });
             }
             res.json(watched);

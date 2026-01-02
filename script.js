@@ -1,4 +1,3 @@
-
 // script.js - Logique Frontend améliorée pour CineTrack
 
 // ==================== CONFIGURATION ====================
@@ -100,6 +99,30 @@ function showError(message, elementId = null) {
     }
 }
 
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 24px;
+        background: ${type === 'success' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'linear-gradient(135deg, #ef4444, #dc2626)'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        font-weight: 600;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // ==================== AUTHENTIFICATION ====================
 
 let isLoginMode = true;
@@ -147,6 +170,7 @@ async function handleAuth(e) {
         document.getElementById('authModal').classList.remove('active');
         updateUI();
         loadUserData();
+        showToast('Connexion réussie !');
     } else {
         showError(data?.error || 'Erreur lors de l\'authentification', 'authError');
     }
@@ -156,6 +180,7 @@ function logout() {
     clearToken();
     updateUI();
     switchView('movies');
+    showToast('Déconnexion réussie');
 }
 
 async function loadUserData() {
@@ -266,18 +291,6 @@ async function searchMovies() {
     }
 }
 
-async function getMovieGenres(movie) {
-    try {
-        const response = await fetch(
-            `${CONFIG.TMDB_BASE_URL}/movie/${movie.id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-        );
-        const data = await response.json();
-        return data.genres || [];
-    } catch (error) {
-        return [];
-    }
-}
-
 function displayMovies(movies, gridId) {
     const grid = document.getElementById(gridId);
     
@@ -364,6 +377,7 @@ async function rateMovie(movieId, rating) {
         if (ratingDiv) {
             ratingDiv.innerHTML = generateStars(movieId, rating);
         }
+        showToast(`Film noté ${rating}/5 ⭐`);
     }
 }
 
@@ -401,13 +415,13 @@ async function showMovieDetails(movieId) {
                     ${genreBadges ? `<div class="genre-badges">${genreBadges}</div>` : ''}
                     <div class="movie-actions">
                         ${getToken() ? `
-                            <button class="btn btn-small" onclick="openReviewModal(${movieId}, '${movie.title.replace(/'/g, "\\'")}')">
-                                ✍️ Écrire une critique
+                            <button class="btn btn-small" onclick="event.stopPropagation(); openReviewModal(${movieId}, '${movie.title.replace(/'/g, "\\'")}')">
+                                ✏️ Écrire une critique
                             </button>
-                            <button class="btn-secondary btn-small" onclick="toggleWatchlist(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                            <button class="btn-secondary btn-small" id="watchlist-btn-${movieId}" onclick="event.stopPropagation(); toggleWatchlist(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
                                 ${inWatchlist ? '✓ Dans ma watchlist' : '+ Ajouter à la watchlist'}
                             </button>
-                            <button class="btn-secondary btn-small" onclick="toggleWatched(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                            <button class="btn-secondary btn-small" id="watched-btn-${movieId}" onclick="event.stopPropagation(); toggleWatched(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
                                 ${isWatched ? '✓ Déjà vu' : '👁️ Marquer comme vu'}
                             </button>
                         ` : ''}
@@ -432,20 +446,41 @@ async function toggleWatchlist(movieId, title, poster) {
     const inWatchlist = state.watchlist.some(w => w.movie_id == movieId);
     
     if (inWatchlist) {
-        await apiRequest(`/watchlist/${movieId}`, { method: 'DELETE' });
-        state.watchlist = state.watchlist.filter(w => w.movie_id != movieId);
+        const result = await apiRequest(`/watchlist/${movieId}`, { method: 'DELETE' });
+        if (result) {
+            state.watchlist = state.watchlist.filter(w => w.movie_id != movieId);
+            showToast('Retiré de la watchlist');
+            
+            // Mise à jour du bouton
+            const btn = document.getElementById(`watchlist-btn-${movieId}`);
+            if (btn) {
+                btn.textContent = '+ Ajouter à la watchlist';
+            }
+            
+            // Recharger si on est dans la vue watchlist
+            if (state.currentView === 'watchlist') {
+                loadWatchlist();
+            }
+        }
     } else {
-        await apiRequest('/watchlist', {
+        const result = await apiRequest('/watchlist', {
             method: 'POST',
             body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: poster })
         });
-        state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
+        if (result) {
+            state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
+            showToast('Ajouté à la watchlist');
+            
+            // Mise à jour du bouton
+            const btn = document.getElementById(`watchlist-btn-${movieId}`);
+            if (btn) {
+                btn.textContent = '✓ Dans ma watchlist';
+            }
+        }
     }
     
-    if (state.currentView === 'watchlist') {
-        loadWatchlist();
-    }
-    document.getElementById('movieModal').classList.remove('active');
+    // Rafraîchir l'affichage des badges sur les cartes
+    refreshMovieCards();
 }
 
 async function loadWatchlist() {
@@ -465,6 +500,8 @@ async function loadWatchlist() {
         return;
     }
 
+    state.watchlist = watchlist;
+
     const movies = watchlist.map(w => ({
         id: w.movie_id,
         title: w.movie_title,
@@ -481,20 +518,41 @@ async function toggleWatched(movieId, title, poster) {
     const isWatched = state.watched.some(w => w.movie_id == movieId);
     
     if (isWatched) {
-        await apiRequest(`/watched/${movieId}`, { method: 'DELETE' });
-        state.watched = state.watched.filter(w => w.movie_id != movieId);
+        const result = await apiRequest(`/watched/${movieId}`, { method: 'DELETE' });
+        if (result) {
+            state.watched = state.watched.filter(w => w.movie_id != movieId);
+            showToast('Retiré des films vus');
+            
+            // Mise à jour du bouton
+            const btn = document.getElementById(`watched-btn-${movieId}`);
+            if (btn) {
+                btn.textContent = '👁️ Marquer comme vu';
+            }
+            
+            // Recharger si on est dans la vue watched
+            if (state.currentView === 'watched') {
+                loadWatched();
+            }
+        }
     } else {
-        await apiRequest('/watched', {
+        const result = await apiRequest('/watched', {
             method: 'POST',
             body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: poster })
         });
-        state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
+        if (result) {
+            state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
+            showToast('Marqué comme vu');
+            
+            // Mise à jour du bouton
+            const btn = document.getElementById(`watched-btn-${movieId}`);
+            if (btn) {
+                btn.textContent = '✓ Déjà vu';
+            }
+        }
     }
     
-    if (state.currentView === 'watched') {
-        loadWatched();
-    }
-    document.getElementById('movieModal').classList.remove('active');
+    // Rafraîchir l'affichage des badges sur les cartes
+    refreshMovieCards();
 }
 
 async function loadWatched() {
@@ -514,6 +572,8 @@ async function loadWatched() {
         return;
     }
 
+    state.watched = watched;
+
     const movies = watched.map(w => ({
         id: w.movie_id,
         title: w.movie_title,
@@ -522,6 +582,39 @@ async function loadWatched() {
     }));
 
     displayMovies(movies, 'watchedGrid');
+}
+
+// Fonction pour rafraîchir uniquement les badges des cartes
+function refreshMovieCards() {
+    const movieCards = document.querySelectorAll('.movie-card');
+    movieCards.forEach(card => {
+        const movieId = parseInt(card.getAttribute('onclick').match(/\d+/)[0]);
+        const poster = card.querySelector('.movie-poster');
+        
+        // Supprimer les anciens badges
+        const oldWatchlistBadge = poster.querySelector('.watchlist-badge');
+        const oldWatchedBadge = poster.querySelector('.watched-badge');
+        if (oldWatchlistBadge) oldWatchlistBadge.remove();
+        if (oldWatchedBadge) oldWatchedBadge.remove();
+        
+        // Ajouter les nouveaux badges si nécessaire
+        const inWatchlist = state.watchlist.some(w => w.movie_id == movieId);
+        const isWatched = state.watched.some(w => w.movie_id == movieId);
+        
+        if (inWatchlist) {
+            const badge = document.createElement('div');
+            badge.className = 'watchlist-badge';
+            badge.textContent = 'À voir';
+            poster.appendChild(badge);
+        }
+        
+        if (isWatched) {
+            const badge = document.createElement('div');
+            badge.className = 'watched-badge';
+            badge.textContent = '✓ Vu';
+            poster.appendChild(badge);
+        }
+    });
 }
 
 // ==================== REVIEWS ====================
@@ -549,7 +642,7 @@ async function submitReview(e) {
     if (data) {
         document.getElementById('reviewModal').classList.remove('active');
         document.getElementById('movieModal').classList.remove('active');
-        alert('Critique publiée !');
+        showToast('Critique publiée !');
     } else {
         showError('Erreur lors de la publication', 'reviewError');
     }
@@ -635,66 +728,9 @@ function createRatingsChart(ratings) {
             datasets: [{
                 label: 'Nombre de films',
                 data: ratingCounts,
-                backgroundColor: 'rgba(0, 224, 84, 0.7)',
-                borderColor: 'rgba(0, 224, 84, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(37, 99, 235, 1)',
                 borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { 
-                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'),
-                        stepSize: 1
-                    },
-                    grid: { color: 'rgba(68, 85, 102, 0.2)' }
-                },
-                x: {
-                    ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
-
-function createActivityChart(ratings) {
-    const ctx = document.getElementById('activityChart');
-    if (!ctx) return;
-
-    const monthCounts = {};
-    ratings.forEach(r => {
-        const date = new Date(r.created_at);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
-    });
-
-    const sortedMonths = Object.keys(monthCounts).sort().slice(-6);
-    const counts = sortedMonths.map(m => monthCounts[m]);
-
-    if (activityChart) activityChart.destroy();
-
-    activityChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: sortedMonths.map(m => {
-                const [year, month] = m.split('-');
-                return new Date(year, month - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-            }),
-            datasets: [{
-                label: 'Films notés',
-                data: counts,
-                borderColor: 'rgba(0, 224, 84, 1)',
-                backgroundColor: 'rgba(0, 224, 84, 0.1)',
-                tension: 0.4,
-                fill: true,
-                borderWidth: 3
             }]
         },
         options: {
@@ -863,3 +899,114 @@ function updateMobileNav(activeId) {
     });
     document.getElementById(activeId).classList.add('active');
 }
+
+// ==================== STYLES TOASTS ====================
+
+const toastStyles = document.createElement('style');
+toastStyles.textContent = `
+@keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(400px); opacity: 0; }
+}
+`;
+document.head.appendChild(toastStyles);
+
+// ==================== ACTIVITY CHART ====================
+
+function createActivityChart(ratings) {
+    const ctx = document.getElementById('activityChart');
+    if (!ctx) return;
+
+    const monthCounts = {};
+    ratings.forEach(r => {
+        const date = new Date(r.created_at);
+        const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        monthCounts[key] = (monthCounts[key] || 0) + 1;
+    });
+
+    const months = Object.keys(monthCounts).sort().slice(-6);
+    const counts = months.map(m => monthCounts[m]);
+
+    if (activityChart) activityChart.destroy();
+
+    activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months.map(m => {
+                const [year, month] = m.split('-');
+                return new Date(year, month - 1)
+                    .toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+            }),
+            datasets: [{
+                label: 'Films notés',
+                data: counts,
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-secondary')
+                    },
+                    grid: {
+                        color: 'rgba(68, 85, 102, 0.2)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-secondary')
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+//
+// ==================== INITIALISATION ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initialiser le thème
+    initTheme();
+
+    // 2. Charger les films populaires (page d'accueil)
+    if (document.getElementById('moviesGrid')) {
+        loadPopularMovies();
+    }
+
+    // 3. Si l'utilisateur est connecté, charger ses données
+    if (getToken()) {
+        updateUI();
+        loadUserData(); // C'est cette fonction qui récupère la liste 'watched' pour les badges
+    }
+
+    // Gestion de la navigation mobile (si nécessaire)
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('active');
+        });
+    }
+});
