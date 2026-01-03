@@ -332,7 +332,7 @@ function displaySwiperMovie() {
                 <h2 class="swiper-title-modern">${movie.title}</h2>
                 <div class="swiper-year-modern">${year}</div>
             </div>
-            <div class="swiper-poster-modern">
+            <div class="swiper-poster-modern" onclick="showMovieDetails(${movie.id})">
                 <img src="${poster}" alt="${movie.title}">
             </div>
             <div class="swiper-actions-modern">
@@ -359,6 +359,39 @@ function displaySwiperMovie() {
             </div>
         </div>
     `;
+
+    // Ajouter les gestes de swipe
+    setupSwipeGestures();
+}
+
+function setupSwipeGestures() {
+    const container = document.getElementById('swiperContainer');
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    container.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                // Swipe gauche -> film suivant
+                nextSwiperMovie();
+            } else {
+                // Swipe droite -> film précédent
+                prevSwiperMovie();
+            }
+        }
+    }
 }
 
 async function addToWatchlistSwiper(movieId, title, posterPath) {
