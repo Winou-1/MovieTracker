@@ -18,10 +18,10 @@
             <div class="logo">🎬 CineTrack</div>
             <ul class="nav-links">
                 <li><a href="#" id="navFilms">Films</a></li>
+                <li><a href="#" id="navSwiper">Découvrir</a></li>
                 <li><a href="#" id="navWatchlist">Watchlist</a></li>
                 <li><a href="#" id="navWatched">Films vus</a></li>
                 <li><a href="#" id="navProfile">Profil</a></li>
-                <li><a href="#" id="navFeed">Feed</a></li>
             </ul>
             <div id="authButtons">
                 <button class="btn-secondary" id="loginBtn">Connexion</button>
@@ -56,6 +56,13 @@
             </div>
         </section>
 
+        <!-- Section Swiper (nouvelle) -->
+        <section class="swiper-section" id="swiperSection" style="display: none;">
+            <div id="swiperContainer" class="swiper-container">
+                <div class="loading">Chargement...</div>
+            </div>
+        </section>
+
         <!-- Section Watchlist -->
         <section class="movies-section" id="watchlistSection" style="display: none;">
             <div class="container">
@@ -81,6 +88,25 @@
             <div class="container">
                 <h2 class="section-title">Mon Profil</h2>
                 <div class="profile-content">
+                    <!-- En-tête du profil avec avatar -->
+                    <div class="profile-header">
+                        <div class="profile-avatar-wrapper">
+                            <img id="profileAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%233b82f6'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='40' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" alt="Avatar" class="profile-avatar">
+                            <label for="avatarUpload" class="profile-avatar-upload">
+                                📷
+                                <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+                            </label>
+                        </div>
+                        <div class="profile-info">
+                            <h2 id="profileUsername">Utilisateur</h2>
+                            <p class="profile-email" id="profileEmail">email@example.com</p>
+                            <div class="profile-actions">
+                                <button class="btn-secondary btn-small" onclick="editUsername()">✏️ Modifier le pseudo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques -->
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-value" id="statRated">0</div>
@@ -100,42 +126,32 @@
                         </div>
                     </div>
 
-                    <!-- Graphiques -->
-                    <div class="charts-section">
-                        <div class="chart-container">
-                            <h3>Répartition des notes</h3>
-                            <canvas id="ratingsChart"></canvas>
-                        </div>
-                        <div class="chart-container">
-                            <h3>Activité mensuelle</h3>
-                            <canvas id="activityChart"></canvas>
+                    <!-- Genres favoris -->
+                    <div class="favorite-genres">
+                        <h3>Mes genres préférés</h3>
+                        <div id="genreList" class="genre-list">
+                            <div class="loading">Chargement...</div>
                         </div>
                     </div>
-
-                    <div class="recent-reviews">
-                        <h3>Mes dernières critiques</h3>
-                        <div id="userReviewsList"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section Feed -->
-        <section class="feed-section" id="feedSection" style="display: none;">
-            <div class="container">
-                <h2 class="section-title">Critiques récentes</h2>
-                <div id="feedList" class="feed-list">
-                    <div class="loading">Chargement...</div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Mobile Navigation (Bottom Bar) -->
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle">
+        <span class="theme-icon">🌙</span>
+    </button>
+
+    <!-- Navigation Mobile -->
     <nav class="mobile-nav">
         <a class="mobile-nav-item active" id="mobileNavFilms">
             <div class="mobile-nav-icon">🎬</div>
             <div class="mobile-nav-label">Films</div>
+        </a>
+        <a class="mobile-nav-item" id="mobileNavSwiper">
+            <div class="mobile-nav-icon">🔥</div>
+            <div class="mobile-nav-label">Découvrir</div>
         </a>
         <a class="mobile-nav-item" id="mobileNavWatchlist">
             <div class="mobile-nav-icon">📝</div>
@@ -148,10 +164,6 @@
         <a class="mobile-nav-item" id="mobileNavProfile">
             <div class="mobile-nav-icon">👤</div>
             <div class="mobile-nav-label">Profil</div>
-        </a>
-        <a class="mobile-nav-item" id="mobileNavFeed">
-            <div class="mobile-nav-icon">💬</div>
-            <div class="mobile-nav-label">Feed</div>
         </a>
     </nav>
 
@@ -211,8 +223,6 @@
         </div>
     </div>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
