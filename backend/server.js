@@ -41,7 +41,7 @@ function initDatabase() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             movie_id INTEGER NOT NULL,
-            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 10),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE(user_id, movie_id)
@@ -191,7 +191,7 @@ app.post('/api/ratings', authenticateToken, (req, res) => {
     const { movie_id, rating } = req.body;
     const user_id = req.user.id;
 
-    if (!movie_id || !rating || rating < 1 || rating > 5) {
+    if (!movie_id || !rating || rating < 1 || rating > 10) {
         return res.status(400).json({ error: 'Données invalides' });
     }
 

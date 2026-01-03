@@ -18,27 +18,8 @@ const state = {
     watchlist: [],
     watched: [],
     currentView: 'movies',
-    theme: localStorage.getItem('theme') || 'dark'
 };
 
-// ==================== THEME ====================
-
-function initTheme() {
-    document.documentElement.setAttribute('data-theme', state.theme);
-    updateThemeIcon();
-}
-
-function toggleTheme() {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('theme', state.theme);
-    document.documentElement.setAttribute('data-theme', state.theme);
-    updateThemeIcon();
-}
-
-function updateThemeIcon() {
-    const icon = document.querySelector('.theme-icon');
-    icon.textContent = state.theme === 'dark' ? '☀️' : '🌙';
-}
 
 // ==================== UTILS ====================
 
@@ -294,6 +275,7 @@ async function searchMovies() {
 function displayMovies(movies, gridId) {
     const grid = document.getElementById(gridId);
     
+    // Gestion du cas vide
     if (movies.length === 0) {
         grid.innerHTML = '<div class="empty-state"><h3>Aucun film trouvé</h3></div>';
         return;
@@ -303,27 +285,19 @@ function displayMovies(movies, gridId) {
         const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
         const isWatched = state.watched.some(w => w.movie_id == movie.id);
         
+        // On ne retourne que la structure du poster, sans le bloc .movie-info
         return `
-            <div class="movie-card" onclick="showMovieDetails(${movie.id})">
+            <div class="movie-card" data-movie-id="${movie.id}" onclick="showMovieDetails(${movie.id})">
                 <div class="movie-poster">
-                    ${movie.poster_path 
-                        ? `<img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">`
-                        : '🎬'}
+                    ${movie.poster_path ? `<img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">` : '🎬'}
                     ${inWatchlist ? '<div class="watchlist-badge">À voir</div>' : ''}
                     ${isWatched ? '<div class="watched-badge">✓ Vu</div>' : ''}
-                </div>
-                <div class="movie-info">
-                    <div class="movie-title">${movie.title}</div>
-                    <div class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</div>
-                    <div class="rating" id="rating-${movie.id}"></div>
                 </div>
             </div>
         `;
     }).join('');
 
-    if (getToken()) {
-        loadRatings(movies);
-    }
+    // J'ai supprimé l'appel à loadRatings(movies) car il n'y a plus d'étoiles à afficher dans la grille
 }
 
 async function loadRatings(movies) {
@@ -338,7 +312,7 @@ async function loadRatings(movies) {
 
 function generateStars(movieId, currentRating) {
     let html = '';
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
         html += `<span class="star ${i <= currentRating ? 'filled' : ''}" 
                       onclick="event.stopPropagation(); rateMovie(${movieId}, ${i})"
                       onmouseover="hoverStars(${movieId}, ${i})"
@@ -377,7 +351,7 @@ async function rateMovie(movieId, rating) {
         if (ratingDiv) {
             ratingDiv.innerHTML = generateStars(movieId, rating);
         }
-        showToast(`Film noté ${rating}/5 ⭐`);
+        showToast(`Film noté ${rating}/10 ⭐`);
     }
 }
 
@@ -387,105 +361,132 @@ async function showMovieDetails(movieId) {
     const modal = document.getElementById('movieModal');
     const details = document.getElementById('movieDetails');
     
+    details.innerHTML = '<div class="loading">Chargement...</div>';
+    modal.classList.add('active');
+
     try {
         const response = await fetch(
             `${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
         );
         const movie = await response.json();
-        
-        const inWatchlist = state.watchlist.some(w => w.movie_id == movieId);
-        const isWatched = state.watched.some(w => w.movie_id == movieId);
-        
-        const genreBadges = movie.genres ? movie.genres.map(g => 
-            `<span class="genre-badge">${g.name}</span>`
-        ).join('') : '';
-        
+
+        const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
+        const isWatched = state.watched.some(w => w.movie_id == movie.id);
+        const poster = movie.poster_path ? `${CONFIG.TMDB_IMG_URL}${movie.poster_path}` : 'placeholder.jpg';
+        const year = movie.release_date ? movie.release_date.split('-')[0] : '';
+
         details.innerHTML = `
             <div class="movie-details-grid">
                 <div class="movie-details-poster">
-                    ${movie.poster_path 
-                        ? `<img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">`
-                        : '<div style="background: #1f2327; aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center;">🎬</div>'}
+                    <img src="${poster}" alt="${movie.title}">
                 </div>
                 <div class="movie-details-info">
-                    <h2>${movie.title}</h2>
-                    <p><strong>Date de sortie:</strong> ${movie.release_date}</p>
-                    <p><strong>Note moyenne:</strong> ${movie.vote_average}/10</p>
-                    <p><strong>Durée:</strong> ${movie.runtime} minutes</p>
-                    ${genreBadges ? `<div class="genre-badges">${genreBadges}</div>` : ''}
-                    <div class="movie-actions">
+                    <h2>${movie.title} <span style="font-weight:400; color:#888; font-size: 0.8em;">(${year})</span></h2>
+                    
+                    <div class="genre-badges">
+                        ${movie.genres ? movie.genres.map(g => `<span class="genre-badge">${g.name}</span>`).join('') : ''}
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; gap: 15px; align-items: center;">
+                        <span>⭐ TMDB: ${movie.vote_average.toFixed(1)}/10</span>
+                    </div>
+
+                    <div class="user-rating-section">
+                        <span class="rating-label">Votre note :</span>
+                        <div class="modal-stars" id="modal-rating-${movie.id}"></div>
+                    </div>
+
+                    <div class="movie-actions" style="margin-top: 20px;">
                         ${getToken() ? `
-                            <button type="button" class="btn btn-small"  onclick="event.stopPropagation(); openReviewModal(${movieId}, '${movie.title.replace(/'/g, "\\'")}')">
-                                ✏️ Écrire une critique
+                            <button class="btn btn-small" onclick="openReviewModal(${movie.id}, '${movie.title.replace(/'/g, "\\'")}')">
+                                ✏️ Critique
                             </button>
-                            <button type="button" class="btn-secondary btn-small" id="watchlist-btn-${movieId}" onclick="event.stopPropagation(); toggleWatchlist(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
-                                ${inWatchlist ? '✓ Dans ma watchlist' : '+ Ajouter à la watchlist'}
+                            
+                            <button id="btn-watchlist-${movie.id}" 
+                                    class="btn-secondary btn-small" 
+                                    onclick="toggleWatchlist(${movie.id}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                                ${inWatchlist ? '✓ Watchlist' : '+ Watchlist'}
                             </button>
-                            <button type="button" class="btn-secondary btn-small" id="watched-btn-${movieId}" onclick="event.stopPropagation(); toggleWatched(${movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
-                                ${isWatched ? '✓ Déjà vu' : '👁️ Marquer comme vu'}
+                            
+                            <button id="btn-watched-${movie.id}" 
+                                    class="btn-secondary btn-small" 
+                                    onclick="toggleWatched(${movie.id}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
+                                ${isWatched ? '✓ Vu' : '👁️ Vu'}
                             </button>
-                        ` : ''}
+                        ` : '<p>Connectez-vous pour gérer ce film</p>'}
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h3>Synopsis</h3>
+                        <p>${movie.overview || 'Pas de résumé.'}</p>
                     </div>
                 </div>
             </div>
-            <div>
-                <h3 style="color: var(--text-primary); margin-bottom: 10px;">Synopsis</h3>
-                <p>${movie.overview || 'Pas de synopsis disponible'}</p>
-            </div>
         `;
-        
-        modal.classList.add('active');
+
+        // IMPORTANT : On active les étoiles
+        setupRatingStars(movie.id);
+
     } catch (error) {
-        console.error('Erreur:', error);
+        console.error(error);
+        details.innerHTML = '<div class="error">Erreur de chargement.</div>';
     }
 }
 
-document.getElementById('movieDetailsForm')?.addEventListener('submit', e => {
-    e.preventDefault();
-});
 
 
 // ==================== WATCHLIST ====================
 
-async function toggleWatchlist(movieId, title, poster) {
-    const inWatchlist = state.watchlist.some(w => w.movie_id == movieId);
+async function toggleWatchlist(movieId, title, posterPath) {
+    if (!getToken()) return;
+
+    // 1. Récupérer le bouton dans le modal
+    const btn = document.getElementById(`btn-watchlist-${movieId}`);
     
-    if (inWatchlist) {
-        const result = await apiRequest(`/watchlist/${movieId}`, { method: 'DELETE' });
-        if (result) {
-            state.watchlist = state.watchlist.filter(w => w.movie_id != movieId);
-            showToast('Retiré de la watchlist');
-            
-            // Mise à jour du bouton
-            const btn = document.getElementById(`watchlist-btn-${movieId}`);
-            if (btn) {
-                btn.textContent = '+ Ajouter à la watchlist';
-            }
-            
-            // Recharger si on est dans la vue watchlist
-            if (state.currentView === 'watchlist') {
-                loadWatchlist();
-            }
-        }
-    } else {
-        const result = await apiRequest('/watchlist', {
-            method: 'POST',
-            body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: poster })
-        });
-        if (result) {
-            state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
-            showToast('Ajouté à la watchlist');
-            
-            // Mise à jour du bouton
-            const btn = document.getElementById(`watchlist-btn-${movieId}`);
-            if (btn) {
-                btn.textContent = '✓ Dans ma watchlist';
-            }
-        }
+    // 2. Vérifier l'état actuel
+    const index = state.watchlist.findIndex(m => m.movie_id == movieId);
+    const isInList = index !== -1;
+
+    // 3. Mise à jour VISUELLE immédiate (Optimiste)
+    if (btn) {
+        btn.textContent = isInList ? '+ Watchlist' : '✓ Watchlist';
+        // Petit effet d'animation optionnel
+        btn.style.transform = "scale(0.95)";
+        setTimeout(() => btn.style.transform = "scale(1)", 150);
     }
-    
-    // Rafraîchir l'affichage des badges sur les cartes
-    refreshMovieCards();
+
+    try {
+        if (isInList) {
+            // RETIRER
+            await apiRequest(`/watchlist/${movieId}`, { method: 'DELETE' });
+            state.watchlist.splice(index, 1); // Mise à jour locale du tableau
+            showToast('Retiré de la watchlist');
+        } else {
+            // AJOUTER
+            await apiRequest('/watchlist', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    movie_id: movieId, 
+                    movie_title: title, 
+                    movie_poster: posterPath 
+                })
+            });
+            // Mise à jour locale du tableau
+            state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
+            showToast('Ajouté à la watchlist');
+        }
+        
+        // 4. Mettre à jour la grille en arrière-plan pour que les badges suivent
+        if (state.currentView === 'movies') {
+            displayMovies(state.movies, 'moviesGrid');
+        }
+        
+    } catch (error) {
+        console.error("Erreur toggle watchlist", error);
+        // Si erreur, on annule le changement visuel
+        if (btn) btn.textContent = isInList ? '✓ Watchlist' : '+ Watchlist';
+        showToast('Erreur de connexion');
+    }
 }
 
 async function loadWatchlist() {
@@ -519,45 +520,48 @@ async function loadWatchlist() {
 
 // ==================== WATCHED ====================
 
-async function toggleWatched(movieId, title, poster) {
-    const isWatched = state.watched.some(w => w.movie_id == movieId);
-    
-    if (isWatched) {
-        const result = await apiRequest(`/watched/${movieId}`, { method: 'DELETE' });
-        if (result) {
-            state.watched = state.watched.filter(w => w.movie_id != movieId);
-            showToast('Retiré des films vus');
-            
-            // Mise à jour du bouton
-            const btn = document.getElementById(`watched-btn-${movieId}`);
-            if (btn) {
-                btn.textContent = '👁️ Marquer comme vu';
-            }
-            
-            // Recharger si on est dans la vue watched
-            if (state.currentView === 'watched') {
-                loadWatched();
-            }
-        }
-    } else {
-        const result = await apiRequest('/watched', {
-            method: 'POST',
-            body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: poster })
-        });
-        if (result) {
-            state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: poster });
-            showToast('Marqué comme vu');
-            
-            // Mise à jour du bouton
-            const btn = document.getElementById(`watched-btn-${movieId}`);
-            if (btn) {
-                btn.textContent = '✓ Déjà vu';
-            }
-        }
+async function toggleWatched(movieId, title, posterPath) {
+    if (!getToken()) return;
+
+    const btn = document.getElementById(`btn-watched-${movieId}`);
+    const index = state.watched.findIndex(m => m.movie_id == movieId);
+    const isWatched = index !== -1;
+
+    // Mise à jour visuelle immédiate
+    if (btn) {
+        btn.textContent = isWatched ? '👁️ Vu' : '✓ Vu';
+        btn.style.transform = "scale(0.95)";
+        setTimeout(() => btn.style.transform = "scale(1)", 150);
     }
-    
-    // Rafraîchir l'affichage des badges sur les cartes
-    refreshMovieCards();
+
+    try {
+        if (isWatched) {
+            await apiRequest(`/watched/${movieId}`, { method: 'DELETE' });
+            state.watched.splice(index, 1);
+            showToast('Retiré des films vus');
+        } else {
+            await apiRequest('/watched', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    movie_id: movieId, 
+                    movie_title: title, 
+                    movie_poster: posterPath 
+                })
+            });
+            state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
+            showToast('Marqué comme vu');
+        }
+
+        // Mise à jour grille arrière-plan
+        if (state.currentView === 'movies') {
+            displayMovies(state.movies, 'moviesGrid');
+        }
+
+    } catch (error) {
+        console.error("Erreur toggle watched", error);
+        if (btn) btn.textContent = isWatched ? '✓ Vu' : '👁️ Vu';
+        showToast('Erreur de connexion');
+    }
 }
 
 async function loadWatched() {
@@ -590,37 +594,20 @@ async function loadWatched() {
 }
 
 // Fonction pour rafraîchir uniquement les badges des cartes
-function refreshMovieCards() {
-    const movieCards = document.querySelectorAll('.movie-card');
-    movieCards.forEach(card => {
-        const movieId = parseInt(card.getAttribute('onclick').match(/\d+/)[0]);
-        const poster = card.querySelector('.movie-poster');
-        
-        // Supprimer les anciens badges
-        const oldWatchlistBadge = poster.querySelector('.watchlist-badge');
-        const oldWatchedBadge = poster.querySelector('.watched-badge');
-        if (oldWatchlistBadge) oldWatchlistBadge.remove();
-        if (oldWatchedBadge) oldWatchedBadge.remove();
-        
-        // Ajouter les nouveaux badges si nécessaire
-        const inWatchlist = state.watchlist.some(w => w.movie_id == movieId);
-        const isWatched = state.watched.some(w => w.movie_id == movieId);
-        
-        if (inWatchlist) {
-            const badge = document.createElement('div');
-            badge.className = 'watchlist-badge';
-            badge.textContent = 'À voir';
-            poster.appendChild(badge);
-        }
-        
-        if (isWatched) {
-            const badge = document.createElement('div');
-            badge.className = 'watched-badge';
-            badge.textContent = '✓ Vu';
-            poster.appendChild(badge);
-        }
+function refreshMovieCards(movieId) {
+    document.querySelectorAll('.movie-card').forEach(card => {
+
+        const btn = card.querySelector(`[id^="watchlist-btn-${movieId}"]`);
+        if (!btn) return; // ⛔️ évite le crash
+
+        const isInWatchlist = state.watchlist.some(w => w.movie_id == movieId);
+
+        btn.textContent = isInWatchlist
+            ? '✓ Dans ma watchlist'
+            : '+ Ajouter à la watchlist';
     });
 }
+
 
 // ==================== REVIEWS ====================
 
@@ -717,9 +704,9 @@ function createRatingsChart(ratings) {
     const ctx = document.getElementById('ratingsChart');
     if (!ctx) return;
 
-    const ratingCounts = [0, 0, 0, 0, 0];
+    const ratingCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     ratings.forEach(r => {
-        if (r.rating >= 1 && r.rating <= 5) {
+        if (r.rating >= 1 && r.rating <= 10) {
             ratingCounts[r.rating - 1]++;
         }
     });
@@ -729,7 +716,7 @@ function createRatingsChart(ratings) {
     ratingsChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['1⭐', '2⭐', '3⭐', '4⭐', '5⭐'],
+            labels: ['1⭐', '2⭐', '3⭐', '4⭐', '5⭐', '6⭐', '7⭐', '8⭐', '9⭐', '10⭐'],
             datasets: [{
                 label: 'Nombre de films',
                 data: ratingCounts,
@@ -761,26 +748,136 @@ function createRatingsChart(ratings) {
         }
     });
 }
+// ==================== TEST FIX RELOAD ====================
+
+document.addEventListener('click', e => {
+    const card = e.target.closest('.movie-card');
+    if (!card) return;
+
+    // ⛔️ Si un modal est ouvert, on ignore
+    if (document.getElementById('movieModal').classList.contains('active')) {
+        return;
+    }
+
+    showMovieDetails(card.dataset.movieId);
+});
+
+
+function handleModalAction(e, action) {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+}
+
+
+async function setupRatingStars(movieId) {
+    const container = document.getElementById(`modal-rating-${movieId}`);
+    if (!container) return;
+
+    // 1. Récupérer la note existante de l'utilisateur
+    let currentRating = 0;
+    if (getToken()) {
+        try {
+            const data = await apiRequest(`/ratings/${movieId}`);
+            if (data && data.rating) {
+                currentRating = data.rating;
+            }
+        } catch (e) {
+            console.error("Erreur chargement note", e);
+        }
+    }
+
+    // 2. Générer les 10 étoiles HTML
+    const starsHtml = Array.from({ length: 10 }, (_, i) => i + 1).map(starValue => `
+        <span class="modal-star ${starValue <= currentRating ? 'active' : ''}" 
+              data-value="${starValue}" 
+              title="${starValue}/10">★</span>
+    `).join('');
+    
+    container.innerHTML = starsHtml;
+
+    // Si l'utilisateur n'est pas connecté, on s'arrête ici (affichage seul)
+    if (!getToken()) {
+        container.title = "Connectez-vous pour noter";
+        return;
+    }
+
+    // 3. Ajouter les événements d'animation (Hover) et de validation (Click)
+    const stars = container.querySelectorAll('.modal-star');
+    const label = container.parentElement.querySelector('.rating-label'); 
+    
+    stars.forEach(star => {
+        // --- ANIMATION AU SURVOL ---
+        star.addEventListener('mouseenter', () => {
+            const val = parseInt(star.dataset.value);
+            
+            // Mise à jour du texte temporaire
+            if(label) label.textContent = `Votre note : ${val}/10`;
+            
+            // On ajoute la classe 'hover' à toutes les étoiles jusqu'à celle survolée
+            stars.forEach(s => {
+                const sVal = parseInt(s.dataset.value);
+                s.classList.toggle('hover', sVal <= val);
+            });
+        });
+
+        // --- VALIDATION AU CLIC ---
+        star.addEventListener('click', async () => {
+            const rating = parseInt(star.dataset.value);
+            
+            // On fige visuellement la note avec la classe 'active'
+            stars.forEach(s => {
+                const sVal = parseInt(s.dataset.value);
+                s.classList.toggle('active', sVal <= rating);
+            });
+            
+            currentRating = rating; // On mémorise la nouvelle note
+
+            // Sauvegarde en base de données
+            await apiRequest('/ratings', {
+                method: 'POST',
+                body: JSON.stringify({ movie_id: movieId, rating: rating })
+            });
+            
+            showToast(`Note enregistrée : ${rating}/10`);
+        });
+    });
+    
+    // --- RESET QUAND LA SOURIS SORT ---
+    container.addEventListener('mouseleave', () => {
+        // On retire l'effet de survol
+        stars.forEach(s => s.classList.remove('hover'));
+        
+        // On remet le texte correspondant à la note réelle enregistrée
+        if(label) {
+            label.textContent = currentRating > 0 ? `Votre note : ${currentRating}/10` : 'Votre note :';
+        }
+    });
+}
 
 // ==================== EVENT LISTENERS ====================
 
 document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
 const movieModal = document.getElementById('movieModal');
 
-movieModal.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-});
-document.querySelectorAll('a[href="#"]').forEach(link => {
-    link.addEventListener('click', e => {
-        e.preventDefault();
+
+    document.getElementById('movieModal').addEventListener('click', e => {
+        e.stopPropagation();
     });
-});
+
+    movieModal.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    document.querySelectorAll('a[href="#"]').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+        });
+    });
 
 
-    // Theme toggle
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+
 
     // Auth
     document.getElementById('loginBtn').addEventListener('click', () => openAuthModal(true));
@@ -1006,7 +1103,6 @@ function createActivityChart(ratings) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialiser le thème
-    initTheme();
 
     // 2. Charger les films populaires (page d'accueil)
     if (document.getElementById('moviesGrid')) {

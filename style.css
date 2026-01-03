@@ -1,5 +1,22 @@
 /* style.css - Styles améliorés pour CineTrack */
+/* ==================== SCROLLBAR CACHÉE ==================== */
 
+/* Pour Firefox */
+* {
+    scrollbar-width: none !important;
+}
+
+/* Pour Chrome, Safari, Edge et Opera */
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Pour Internet Explorer et l'ancien Edge */
+* {
+    -ms-overflow-style: none !important;
+}
 * {
     margin: 0;
     padding: 0;
@@ -252,10 +269,10 @@ nav {
     display: flex;
     align-items: center;
     gap: 16px;
-    background: rgba(59, 130, 246, 0.12);
+    /*background: rgba(59, 130, 246, 0.12);*/
     padding: 8px 16px;
     border-radius: 12px;
-    border: 1px solid rgba(37, 99, 235, 0.6);
+    /*border: 1px solid rgba(37, 99, 235, 0.6);*/
 }
 
 #usernameDisplay {
@@ -915,6 +932,46 @@ nav {
     font-weight: 600;
 }
 
+/* ==================== NOTATION MODAL (10 ÉTOILES) ==================== */
+.user-rating-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rating-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.modal-stars {
+    display: inline-flex;
+    flex-wrap: wrap; /* Permet de passer à la ligne si l'écran est minuscule */
+    gap: 2px;       /* Espacement réduit entre les étoiles */
+    cursor: pointer;
+}
+
+.modal-star {
+    font-size: 24px; /* Taille ajustée pour que 10 étoiles rentrent bien */
+    color: var(--text-muted); /* Gris par défaut */
+    transition: color 0.1s ease, transform 0.1s ease;
+    user-select: none; /* Empêche de sélectionner le texte de l'étoile */
+}
+
+/* Couleur or pour les étoiles actives ou survolées */
+.modal-star.active,
+.modal-star.hover {
+    color: #fbbf24;
+}
+
+.modal-star:hover {
+    transform: scale(1.2); /* Petit effet de zoom au survol */
+}
+
 /* ==================== SCROLLBAR ==================== */
 
 ::-webkit-scrollbar {
@@ -1083,7 +1140,7 @@ nav {
     }
 
     .movies-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(3, minmax(100px, 1fr));
         gap: 16px;
     }
 
