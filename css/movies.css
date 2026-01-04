@@ -1,0 +1,80 @@
+
+/* ==================== MOVIES GRID ==================== */
+.movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.movie-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border: 1px solid rgba(12, 27, 48, 0.7);
+}
+
+.movie-card:hover {
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border-color: rgba(37, 99, 235, 0.5);
+}
+
+.movie-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: linear-gradient(135deg, #1f2327 0%, #14181c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    position: relative;
+    overflow: hidden;
+}
+
+.movie-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.movie-card:hover .movie-poster img {
+    transform: scale(1.1);
+}
+
+.watchlist-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 2;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.watched-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 2;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+

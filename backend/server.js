@@ -12,7 +12,7 @@ const JWT_SECRET = 'votre_secret_jwt_a_changer'; // À changer en production !
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // ✅ Augmenter la limite pour les images base64
 
 // Initialisation de la base de données SQLite
 const db = new sqlite3.Database('./cinetrack.db', (err) => {
@@ -27,12 +27,13 @@ const db = new sqlite3.Database('./cinetrack.db', (err) => {
 // Création des tables
 function initDatabase() {
     db.serialize(() => {
-        // Table utilisateurs
+        // Table utilisateurs (✅ AVEC AVATAR)
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
+            avatar TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
@@ -138,7 +139,12 @@ app.post('/api/auth/register', async (req, res) => {
                 res.status(201).json({
                     message: 'Utilisateur créé avec succès',
                     token,
-                    user: { id: this.lastID, username, email }
+                    user: { 
+                        id: this.lastID, 
+                        username, 
+                        email,
+                        avatar: null // ✅ Avatar null par défaut
+                    }
                 });
             }
         );
@@ -176,12 +182,117 @@ app.post('/api/auth/login', (req, res) => {
             res.json({
                 message: 'Connexion réussie',
                 token,
-                user: { id: user.id, username: user.username, email: user.email }
+                user: { 
+                    id: user.id, 
+                    username: user.username, 
+                    email: user.email,
+                    avatar: user.avatar // ✅ Retourne l'avatar
+                }
             });
         } catch (error) {
             res.status(500).json({ error: 'Erreur serveur' });
         }
     });
+});
+
+// ==================== ROUTES PROFIL ====================
+
+// ✅ Récupérer le profil complet
+app.get('/api/profile', authenticateToken, (req, res) => {
+    db.get(
+        'SELECT id, username, email, avatar, created_at FROM users WHERE id = ?',
+        [req.user.id],
+        (err, user) => {
+            if (err) {
+                return res.status(500).json({ error: 'Erreur serveur' });
+            }
+            if (!user) {
+                return res.status(404).json({ error: 'Utilisateur non trouvé' });
+            }
+            res.json(user);
+        }
+    );
+});
+
+// ✅ Mettre à jour l'avatar
+app.put('/api/profile/avatar', authenticateToken, (req, res) => {
+    const { avatar } = req.body;
+
+    if (!avatar) {
+        return res.status(400).json({ error: 'Avatar requis' });
+    }
+
+    // Vérifier que c'est bien une image base64
+    if (!avatar.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Format d\'image invalide' });
+    }
+
+    // Limiter la taille (environ 1MB en base64)
+    if (avatar.length > 1500000) {
+        return res.status(400).json({ error: 'Image trop volumineuse (max 1MB)' });
+    }
+
+    db.run(
+        'UPDATE users SET avatar = ? WHERE id = ?',
+        [avatar, req.user.id],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+            }
+
+            // Récupérer l'utilisateur mis à jour
+            db.get(
+                'SELECT id, username, email, avatar FROM users WHERE id = ?',
+                [req.user.id],
+                (err, user) => {
+                    if (err) {
+                        return res.status(500).json({ error: 'Erreur serveur' });
+                    }
+                    res.json({ 
+                        message: 'Avatar mis à jour',
+                        user 
+                    });
+                }
+            );
+        }
+    );
+});
+
+// ✅ Mettre à jour le username
+app.put('/api/profile/username', authenticateToken, (req, res) => {
+    const { username } = req.body;
+
+    if (!username || username.trim().length === 0) {
+        return res.status(400).json({ error: 'Username requis' });
+    }
+
+    db.run(
+        'UPDATE users SET username = ? WHERE id = ?',
+        [username.trim(), req.user.id],
+        function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE')) {
+                    return res.status(400).json({ error: 'Ce nom d\'utilisateur est déjà pris' });
+                }
+                return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+            }
+
+            // Récupérer l'utilisateur mis à jour
+            db.get(
+                'SELECT id, username, email, avatar FROM users WHERE id = ?',
+                [req.user.id],
+                (err, user) => {
+                    if (err) {
+                        return res.status(500).json({ error: 'Erreur serveur' });
+                    }
+                    res.json({ 
+                        message: 'Pseudo mis à jour',
+                        user 
+                    });
+                }
+            );
+        }
+    );
 });
 
 // ==================== ROUTES NOTATIONS ====================
@@ -343,37 +454,6 @@ app.delete('/api/watchlist/:movie_id', authenticateToken, (req, res) => {
     );
 });
 
-// ==================== ROUTES STATISTIQUES ====================
-
-// Statistiques utilisateur
-app.get('/api/stats', authenticateToken, (req, res) => {
-    const user_id = req.user.id;
-
-    const stats = {};
-
-    // Nombre de films notés
-    db.get('SELECT COUNT(*) as count FROM ratings WHERE user_id = ?', [user_id], (err, result) => {
-        stats.rated_count = result ? result.count : 0;
-
-        // Nombre de critiques
-        db.get('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?', [user_id], (err, result) => {
-            stats.reviews_count = result ? result.count : 0;
-
-            // Note moyenne
-            db.get('SELECT AVG(rating) as avg FROM ratings WHERE user_id = ?', [user_id], (err, result) => {
-                stats.average_rating = result && result.avg ? result.avg.toFixed(1) : 0;
-
-                // Films dans la watchlist
-                db.get('SELECT COUNT(*) as count FROM watchlist WHERE user_id = ?', [user_id], (err, result) => {
-                    stats.watchlist_count = result ? result.count : 0;
-
-                    res.json(stats);
-                });
-            });
-        });
-    });
-});
-
 // ==================== ROUTES WATCHED (FILMS VUS) ====================
 
 // Ajouter aux films vus
@@ -425,6 +505,37 @@ app.delete('/api/watched/:movie_id', authenticateToken, (req, res) => {
             res.json({ message: 'Film retiré des films vus' });
         }
     );
+});
+
+// ==================== ROUTES STATISTIQUES ====================
+
+// Statistiques utilisateur
+app.get('/api/stats', authenticateToken, (req, res) => {
+    const user_id = req.user.id;
+
+    const stats = {};
+
+    // Nombre de films notés
+    db.get('SELECT COUNT(*) as count FROM ratings WHERE user_id = ?', [user_id], (err, result) => {
+        stats.rated_count = result ? result.count : 0;
+
+        // Nombre de critiques
+        db.get('SELECT COUNT(*) as count FROM reviews WHERE user_id = ?', [user_id], (err, result) => {
+            stats.reviews_count = result ? result.count : 0;
+
+            // Note moyenne
+            db.get('SELECT AVG(rating) as avg FROM ratings WHERE user_id = ?', [user_id], (err, result) => {
+                stats.average_rating = result && result.avg ? result.avg.toFixed(1) : 0;
+
+                // Films dans la watchlist
+                db.get('SELECT COUNT(*) as count FROM watchlist WHERE user_id = ?', [user_id], (err, result) => {
+                    stats.watchlist_count = result ? result.count : 0;
+
+                    res.json(stats);
+                });
+            });
+        });
+    });
 });
 
 // ==================== DÉMARRAGE SERVEUR ====================

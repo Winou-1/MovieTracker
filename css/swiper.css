@@ -1,0 +1,269 @@
+
+/* ==================== SWIPER SECTION MODERNE (TINDER STYLE) ==================== */
+.swiper-section {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #000;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.swiper-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swiper-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.4);
+    transform: scale(1.1);
+    z-index: 1;
+    transition: opacity 0.5s ease;
+}
+
+.swiper-card-stack {
+    position: relative;
+    width: 90%;
+    max-width: 400px;
+    height: 650px;
+    z-index: 2;
+}
+
+.swiper-card-modern {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+    transition: none;
+}
+
+.swiper-card-modern.animating {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.swiper-card-modern.behind {
+    z-index: 1;
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.5;
+    filter: blur(2px);
+}
+
+.swiper-card-modern.active {
+    z-index: 2;
+}
+
+.swiper-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.swiper-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.swiper-card-inner {
+    width: 100%;
+    max-width: 320px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.swiper-header {
+    text-align: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.swiper-title-modern {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+
+.swiper-year-modern {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.swiper-poster-container {
+    position: relative;
+    width: 100%;
+    max-width: 320px; /* AJOUT pour limiter la largeur */
+    aspect-ratio: 2/3;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    cursor: grab;
+}
+
+.swiper-poster-container.dragging {
+    cursor: grabbing;
+}
+
+.swiper-poster-modern {
+    width: 100%;
+    height: 100%;
+}
+
+.swiper-poster-modern img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+/* Overlays de swipe */
+.swipe-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    font-size: 48px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+.swipe-overlay.left {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0) 100%);
+    color: #fff;
+}
+
+.swipe-overlay.right {
+    background: linear-gradient(270deg, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0) 100%);
+    color: #fff;
+}
+
+.swipe-overlay.up {
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.9) 0%, rgba(168, 85, 247, 0) 100%);
+    color: #fff;
+}
+
+.swipe-overlay.active {
+    opacity: 1;
+}
+
+/* Indicateurs de swipe en bas */
+.swiper-hints {
+    position: absolute;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    z-index: 3;
+}
+
+.swiper-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.swiper-hint:hover {
+    opacity: 1;
+}
+
+.swiper-hint-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.swiper-hint-icon.watchlist {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #3b82f6;
+}
+
+.swiper-hint-icon.watched {
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
+}
+
+.swiper-hint-icon.skip {
+    border-color: rgba(168, 85, 247, 0.5);
+    color: #a855f7;
+}
+
+.swiper-hint-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.swiper-empty {
+    text-align: center;
+    padding: 60px;
+    color: var(--text-secondary);
+}
