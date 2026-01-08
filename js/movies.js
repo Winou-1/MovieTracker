@@ -11,9 +11,8 @@ async function loadPopularMovies(isScrollLoad = false) {
         if (!isScrollLoad) {
             state.currentPage = 1;
             state.movies = [];
-            state.isSearchMode = false; // ✅ On désactive le mode recherche
-            state.currentSearchQuery = ''; // ✅ On vide la recherche
-            // ✅ On vide aussi l'input de recherche visuellement
+            state.isSearchMode = false;
+            state.currentSearchQuery = '';
             const searchInput = document.getElementById('searchInput');
             if (searchInput) searchInput.value = '';
         }
@@ -55,8 +54,8 @@ async function searchMovies(isScrollLoad = false) {
 
     if (!query) {
         state.searchPage = 1;
-        state.isSearchMode = false; // ✅ On désactive le mode recherche
-        state.currentSearchQuery = ''; // ✅ On vide la recherche
+        state.isSearchMode = false;
+        state.currentSearchQuery = '';
         loadPopularMovies(false);
         return;
     }
@@ -479,24 +478,35 @@ function applyWatchlistFilters() {
     // Filter by genre
     if (genreFilter !== 'all') {
         filtered = filtered.filter(movie => 
-            movie.genres.some(g => g.id == genreFilter)
+            movie.genres && movie.genres.some(g => g.id == genreFilter)
         );
     }
-
-    // Sort
+    // Sort - AVEC PROTECTION CONTRE LES VALEURS NULL
     filtered.sort((a, b) => {
         switch(sortBy) {
             case 'title-asc':
-                return a.title.localeCompare(b.title);
+                const titleA = a.title || '';
+                const titleB = b.title || '';
+                return titleA.localeCompare(titleB);
+                
             case 'title-desc':
-                return b.title.localeCompare(a.title);
+                const titleDescA = a.title || '';
+                const titleDescB = b.title || '';
+                return titleDescB.localeCompare(titleDescA);
+                
             case 'date-asc':
-                return (a.release_date || '').localeCompare(b.release_date || '');
+                const dateA = a.release_date || '9999-12-31';
+                const dateB = b.release_date || '9999-12-31';
+                return dateA.localeCompare(dateB);
+                
             case 'date-desc':
-                return (b.release_date || '').localeCompare(a.release_date || '');
+                const dateDscA = a.release_date || '0000-01-01';
+                const dateDscB = b.release_date || '0000-01-01';
+                return dateDscB.localeCompare(dateDscA);
+                
             case 'added-desc':
             default:
-                return 0; // Keep original order
+                return 0;
         }
     });
 
@@ -506,16 +516,6 @@ function applyWatchlistFilters() {
     } else {
         displayMovies(filtered, 'watchlistGrid');
     }
-}
-
-function resetWatchlistFilters() {
-    document.getElementById('watchlistSortBy').value = 'added-desc';
-    document.getElementById('watchlistGenreFilter').value = 'all';
-    const isMobile = window.innerWidth <= 768;
-    const defaultSize = isMobile ? 3 : 6;
-    document.getElementById('watchlistGridSize').value = defaultSize;
-    handleWatchlistGridSize({ target: document.getElementById('watchlistGridSize') });
-    applyWatchlistFilters();
 }
 
 async function loadWatched() {
@@ -679,7 +679,6 @@ function closeWatchedDropdownOutside(e) {
         btn.classList.remove('active');
     }
 }
-
 function applyWatchedFilters() {
     const sortBy = document.getElementById('watchedSortBy').value;
     const genreFilter = document.getElementById('watchedGenreFilter').value;
@@ -689,28 +688,39 @@ function applyWatchedFilters() {
     // Filter by genre
     if (genreFilter !== 'all') {
         filtered = filtered.filter(movie => 
-            movie.genres.some(g => g.id == genreFilter)
+            movie.genres && movie.genres.some(g => g.id == genreFilter)
         );
     }
-
     // Sort
     filtered.sort((a, b) => {
         switch(sortBy) {
             case 'title-asc':
-                return a.title.localeCompare(b.title);
+                // Protection: si title est null/undefined, le mettre à la fin
+                const titleA = a.title || '';
+                const titleB = b.title || '';
+                return titleA.localeCompare(titleB);
+                
             case 'title-desc':
-                return b.title.localeCompare(a.title);
+                const titleDescA = a.title || '';
+                const titleDescB = b.title || '';
+                return titleDescB.localeCompare(titleDescA);
+                
             case 'date-asc':
-                return (a.release_date || '').localeCompare(b.release_date || '');
+                // Protection: si release_date est null, le mettre à la fin
+                const dateA = a.release_date || '9999-12-31';
+                const dateB = b.release_date || '9999-12-31';
+                return dateA.localeCompare(dateB);
+                
             case 'date-desc':
-                return (b.release_date || '').localeCompare(a.release_date || '');
+                const dateDscA = a.release_date || '0000-01-01';
+                const dateDscB = b.release_date || '0000-01-01';
+                return dateDscB.localeCompare(dateDscA);
+                
             case 'added-desc':
             default:
                 return 0; // Keep original order
         }
     });
-
-    // Display with genre separators if filtered by genre
     if (genreFilter === 'all' && sortBy.includes('title')) {
         displayMoviesWithSeparators(filtered, 'watchedGrid', 'title');
     } else {
