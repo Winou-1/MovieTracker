@@ -17,8 +17,8 @@ const state = {
     swiperIndex: 0,
     currentPage: 1,
     searchPage: 1,
-    isSearchMode: false, // ✅ AJOUTÉ pour savoir si on est en mode recherche
-    currentSearchQuery: '', // ✅ AJOUTÉ pour mémoriser la recherche en cours
+    isSearchMode: false,
+    currentSearchQuery: '',
     isLoading: false,
     userProfile: {
         avatar: null,

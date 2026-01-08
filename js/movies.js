@@ -740,29 +740,36 @@ function resetWatchedFilters() {
 
 function displayMoviesWithSeparators(movies, gridId, separatorType) {
     const grid = document.getElementById(gridId);
+    if (!grid) {
+        console.error(`Grid element with id "${gridId}" not found`);
+        return;
+    }
     
-    if (movies.length === 0) {
+    if (!movies || movies.length === 0) {
         grid.innerHTML = '<div class="empty-state"><h3>Aucun film trouvé</h3></div>';
         return;
     }
-
-    // Déterminer si on est dans watchlist ou watched pour ne pas afficher les badges
     const isWatchlistGrid = gridId === 'watchlistGrid';
     const isWatchedGrid = gridId === 'watchedGrid';
 
+    const watchlistData = (typeof state !== 'undefined' && state.watchlist) ? state.watchlist : [];
+    const watchedData = (typeof state !== 'undefined' && state.watched) ? state.watched : [];
+    
+    const imageBaseUrl = (typeof CONFIG !== 'undefined' && CONFIG.TMDB_IMG_URL) 
+        ? CONFIG.TMDB_IMG_URL 
+        : 'https://image.tmdb.org/t/p/w500';
+
     let html = '';
     let currentLetter = '';
-
     movies.forEach(movie => {
-        const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
-        const isWatched = state.watched.some(w => w.movie_id == movie.id);
+        if (!movie || !movie.id) return;
         
-        // Ne pas afficher les badges si on est dans la grille correspondante
+        const inWatchlist = watchlistData.some(w => w.movie_id == movie.id);
+        const isWatched = watchedData.some(w => w.movie_id == movie.id);
+        
         const showWatchlistBadge = inWatchlist && !isWatchlistGrid;
         const showWatchedBadge = isWatched && !isWatchedGrid;
-        
-        // Ajouter un séparateur alphabétique
-        if (separatorType === 'title') {
+        if (separatorType === 'title' && movie.title && movie.title.length > 0) {
             const firstLetter = movie.title.charAt(0).toUpperCase();
             if (firstLetter !== currentLetter) {
                 currentLetter = firstLetter;
@@ -774,10 +781,14 @@ function displayMoviesWithSeparators(movies, gridId, separatorType) {
             }
         }
 
+        const safeTitle = movie.title || 'Film sans titre';
+        
         html += `
             <div class="movie-card" data-movie-id="${movie.id}" onclick="showMovieDetails(${movie.id})">
                 <div class="movie-poster">
-                    ${movie.poster_path ? `<img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">` : '🎬'}
+                    ${movie.poster_path 
+                        ? `<img src="${imageBaseUrl}${movie.poster_path}" alt="${safeTitle}" loading="lazy">` 
+                        : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;">🎬</div>'}
                     ${showWatchlistBadge ? '<div class="watchlist-badge">À voir</div>' : ''}
                     ${showWatchedBadge ? '<div class="watched-badge">✓ Vu</div>' : ''}
                 </div>
