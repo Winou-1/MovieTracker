@@ -583,3 +583,23 @@ app.delete('/api/ratings/:movie_id', authenticateToken, (req, res) => {
         }
     );
 });
+
+
+// Créer la table reset_tokens
+db.run(`CREATE TABLE IF NOT EXISTS reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`);
+
+// Route pour demander la réinitialisation
+app.post('/api/auth/forgot-password', async (req, res) => {
+    // Voir le code commenté dans forgot-password.js
+});
+
+// Route pour réinitialiser le mot de passe
+app.post('/api/auth/reset-password', async (req, res) => {
+    // Voir le code commenté dans forgot-password.js
+});

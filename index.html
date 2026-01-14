@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineTrack - Ton journal de films</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CineTrack">
+    
     <!-- CSS -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/header.css">
@@ -16,8 +23,10 @@
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/modal-movie.css">
 
-    <!-- JavaScript -->
+    <!-- JavaScript - ORDRE IMPORTANT -->
     <script src="js/config.js"></script>
+    <script src="js/install-guard.js"></script> <!-- ⭐ NOUVEAU -->
+    <script src="js/forgot-password.js"></script> <!-- ⭐ NOUVEAU -->
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/swiper.js"></script>
@@ -27,8 +36,6 @@
     <script src="js/modal-movie.js"></script>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="icon.png">
 </head>
 <body>
@@ -203,7 +210,6 @@
             <div class="container">
                 <h2 class="section-title">Mon Profil</h2>
                 <div class="profile-content">
-                    <!-- En-tête du profil avec avatar -->
                     <div class="profile-header">
                         <div class="profile-avatar-wrapper">
                             <img id="profileAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%233b82f6'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='40' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" alt="Avatar" class="profile-avatar">
@@ -222,7 +228,6 @@
                         </div>
                     </div>
 
-                    <!-- Statistiques -->
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-value" id="statRated">0</div>
@@ -242,7 +247,6 @@
                         </div>
                     </div>
 
-                    <!-- Genres favoris -->
                     <div class="favorite-genres">
                         <h3>Mes genres préférés</h3>
                         <div id="genreList" class="genre-list">
@@ -253,7 +257,6 @@
             </div>
         </section>
     </main>
-
 
     <!-- Navigation Mobile -->
     <nav class="mobile-nav">
@@ -285,22 +288,22 @@
             <button class="close-modal" id="closeAuthModal">&times;</button>
             <h2 id="authModalTitle">Connexion</h2>
             
-            <form id="authForm">
+            <div id="authFormContainer">
                 <div class="form-group" id="usernameGroup" style="display: none;">
                     <label for="authUsername">Nom d'utilisateur</label>
                     <input type="text" id="authUsername" placeholder="Ton pseudo">
                 </div>
                 <div class="form-group">
                     <label for="authEmail">Email</label>
-                    <input type="email" id="authEmail" placeholder="ton@email.com" required>
+                    <input type="email" id="authEmail" placeholder="ton@email.com">
                 </div>
                 <div class="form-group">
                     <label for="authPassword">Mot de passe</label>
-                    <input type="password" id="authPassword" placeholder="••••••" required>
+                    <input type="password" id="authPassword" placeholder="••••••">
                 </div>
                 <div id="authError" class="error" style="display: none;"></div>
-                <button type="submit" class="btn btn-full" id="authSubmitBtn">Se connecter</button>
-            </form>
+                <button class="btn btn-full" id="authSubmitBtn" onclick="handleAuthSubmit()">Se connecter</button>
+            </div>
             
             <div class="auth-switch">
                 <span id="authSwitchText">Pas encore de compte ?</span>
@@ -322,16 +325,16 @@
         <div class="modal-content">
             <button class="close-modal" id="closeReviewModal">&times;</button>
             <h2>Écrire une critique</h2>
-            <form id="reviewForm">
+            <div id="reviewFormContainer">
                 <input type="hidden" id="reviewMovieId">
                 <input type="hidden" id="reviewMovieTitle">
                 <div class="form-group">
                     <label for="reviewContent">Ta critique</label>
-                    <textarea id="reviewContent" rows="6" placeholder="Partage ton avis sur ce film..." required></textarea>
+                    <textarea id="reviewContent" rows="6" placeholder="Partage ton avis sur ce film..."></textarea>
                 </div>
                 <div id="reviewError" class="error" style="display: none;"></div>
-                <button type="submit" class="btn btn-full">Publier</button>
-            </form>
+                <button class="btn btn-full" onclick="submitReview()">Publier</button>
+            </div>
         </div>
     </div>
 </body>
