@@ -554,3 +554,32 @@ process.on('SIGINT', () => {
         process.exit(0);
     });
 });
+
+
+// ==================== SUPPRESSION DE NOTATION ====================
+
+// Supprimer une notation
+app.delete('/api/ratings/:movie_id', authenticateToken, (req, res) => {
+    const { movie_id } = req.params;
+    const user_id = req.user.id;
+
+    db.run(
+        'DELETE FROM ratings WHERE user_id = ? AND movie_id = ?',
+        [user_id, movie_id],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Erreur lors de la suppression' });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Note non trouvée' });
+            }
+            
+            res.json({ 
+                message: 'Note supprimée avec succès', 
+                deleted: true,
+                changes: this.changes 
+            });
+        }
+    );
+});
