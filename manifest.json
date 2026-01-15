@@ -1,94 +1,21 @@
 {
-  "name": "CineTrack - Ton journal de films",
+  "name": "CineTrack",
   "short_name": "CineTrack",
-  "description": "Découvre, note et partage tes films préférés",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
   "background_color": "#14181c",
-  "theme_color": "#667eea",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-192.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2503/2503508.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "icon-384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2503/2503508.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": [
-    "entertainment",
-    "lifestyle"
-  ],
-  "screenshots": [
-    {
-      "src": "screenshot-1.png",
-      "sizes": "540x720",
-      "type": "image/png"
-    },
-    {
-      "src": "screenshot-2.png",
-      "sizes": "540x720",
       "type": "image/png"
     }
-  ],
-  "shortcuts": [
-    {
-      "name": "Découvrir",
-      "short_name": "Découvrir",
-      "description": "Découvre de nouveaux films",
-      "url": "/?view=swiper",
-      "icons": [{ "src": "icon-96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Ma Watchlist",
-      "short_name": "Watchlist",
-      "description": "Films à voir",
-      "url": "/?view=watchlist",
-      "icons": [{ "src": "icon-96.png", "sizes": "96x96" }]
-    }
-  ],
-  "prefer_related_applications": false
+  ]
 }

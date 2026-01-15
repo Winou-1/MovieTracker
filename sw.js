@@ -25,8 +25,6 @@ const ASSETS_TO_CACHE = [
     '/js/main.js',
     '/js/modal-movie.js',
     '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png'
 ];
 
 // Installation du Service Worker
