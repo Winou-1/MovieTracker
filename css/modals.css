@@ -214,3 +214,25 @@
 .movie-actions .btn:active {
     transform: scale(0.96);
 }
+
+
+
+/* Style pour Cropper JS */
+.cropper-view-box,
+.cropper-face {
+    border-radius: 50%;
+    outline: 0;
+}
+
+.cropper-point {
+    background-color: #0c3981; 
+}
+
+.cropper-line {
+    background-color: #0c3981;
+}
+
+.cropper-modal {
+    opacity: 0.8;
+    background-color: #000;
+}

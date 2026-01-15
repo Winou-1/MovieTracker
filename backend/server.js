@@ -38,27 +38,27 @@ function initDatabase() {
         )`);
 
         // Table notations
-        db.run(`CREATE TABLE IF NOT EXISTS ratings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            movie_id INTEGER NOT NULL,
-            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 10),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            UNIQUE(user_id, movie_id)
-        )`);
+        //db.run(`CREATE TABLE IF NOT EXISTS ratings (
+        //    id INTEGER PRIMARY KEY AUTOINCREMENT,
+        //    user_id INTEGER NOT NULL,
+        //    movie_id INTEGER NOT NULL,
+        //    rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 10),
+        //    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        //    FOREIGN KEY (user_id) REFERENCES users(id),
+        //    UNIQUE(user_id, movie_id)
+        //)`);
 
         // Table critiques
-        db.run(`CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            movie_id INTEGER NOT NULL,
-            movie_title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )`);
+        //db.run(`CREATE TABLE IF NOT EXISTS reviews (
+        //    id INTEGER PRIMARY KEY AUTOINCREMENT,
+        //    user_id INTEGER NOT NULL,
+        //    movie_id INTEGER NOT NULL,
+        //    movie_title TEXT NOT NULL,
+        //    content TEXT NOT NULL,
+        //    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        //    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        //    FOREIGN KEY (user_id) REFERENCES users(id)
+        //)`);
 
         // Table watchlist (films à voir)
         db.run(`CREATE TABLE IF NOT EXISTS watchlist (
@@ -82,6 +82,25 @@ function initDatabase() {
             watched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE(user_id, movie_id)
+        )`);
+
+        // Table des likes (Coeur)
+        db.run(`CREATE TABLE IF NOT EXISTS likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            movie_id INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, movie_id)
+        )`);
+
+        // Créer la table reset_tokens
+        db.run(`CREATE TABLE IF NOT EXISTS reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL,
+            expires_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )`);
 
         console.log('✓ Tables initialisées');
@@ -227,9 +246,11 @@ app.put('/api/profile/avatar', authenticateToken, (req, res) => {
         return res.status(400).json({ error: 'Format d\'image invalide' });
     }
 
-    // Limiter la taille (environ 1MB en base64)
-    if (avatar.length > 1500000) {
-        return res.status(400).json({ error: 'Image trop volumineuse (max 1MB)' });
+    // ✅ CHANGEZ la limite de 1MB à 10MB
+    // 1MB en base64 ≈ 1500000 caractères
+    // 10MB en base64 ≈ 15000000 caractères
+    if (avatar.length > 15000000) {
+        return res.status(400).json({ error: 'Image trop volumineuse (max 10MB)' });
     }
 
     db.run(
@@ -584,16 +605,6 @@ app.delete('/api/ratings/:movie_id', authenticateToken, (req, res) => {
     );
 });
 
-
-// Créer la table reset_tokens
-db.run(`CREATE TABLE IF NOT EXISTS reset_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    token TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)`);
-
 // Route pour demander la réinitialisation
 app.post('/api/auth/forgot-password', async (req, res) => {
     // Voir le code commenté dans forgot-password.js
@@ -602,4 +613,65 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 // Route pour réinitialiser le mot de passe
 app.post('/api/auth/reset-password', async (req, res) => {
     // Voir le code commenté dans forgot-password.js
+});
+
+// ==================== GESTION DES LIKES (CŒUR) ====================
+// 1. /all (route spécifique)
+app.get('/api/likes/all', authenticateToken, (req, res) => {
+    const user_id = req.user.id;
+
+    db.all(
+        'SELECT movie_id, created_at FROM likes WHERE user_id = ? ORDER BY created_at DESC',
+        [user_id],
+        (err, likes) => {
+            if (err) {
+                console.error('Erreur lors de la récupération des likes:', err);
+                return res.status(500).json({ error: 'Erreur serveur' });
+            }
+            res.json(likes || []);
+        }
+    );
+});
+
+// 2. :movie_id (route dynamique)
+app.get('/api/likes/:movie_id', authenticateToken, (req, res) => {
+    const { movie_id } = req.params;
+    const user_id = req.user.id;
+
+    db.get('SELECT id FROM likes WHERE user_id = ? AND movie_id = ?', [user_id, movie_id], (err, row) => {
+        if (err) return res.status(500).json({ error: 'Erreur serveur' });
+        res.json({ liked: !!row });
+    });
+});
+
+// 3. Ajouter un like (Cœur rouge)
+app.post('/api/likes', authenticateToken, (req, res) => {
+    const { movie_id } = req.body;
+    const user_id = req.user.id;
+
+    if (!movie_id) {
+        return res.status(400).json({ error: 'movie_id requis' });
+    }
+
+    db.run('INSERT OR IGNORE INTO likes (user_id, movie_id) VALUES (?, ?)', [user_id, movie_id], function(err) {
+        if (err) {
+            console.error('Erreur lors du like:', err);
+            return res.status(500).json({ error: 'Erreur lors du like' });
+        }
+        res.json({ message: 'Film liké', liked: true });
+    });
+});
+
+// 4. Retirer un like (Cœur vide)
+app.delete('/api/likes/:movie_id', authenticateToken, (req, res) => {
+    const { movie_id } = req.params;
+    const user_id = req.user.id;
+
+    db.run('DELETE FROM likes WHERE user_id = ? AND movie_id = ?', [user_id, movie_id], function(err) {
+        if (err) {
+            console.error('Erreur lors de la suppression du like:', err);
+            return res.status(500).json({ error: 'Erreur serveur' });
+        }
+        res.json({ message: 'Like retiré', liked: false });
+    });
 });

@@ -1,5 +1,3 @@
-/* modal-movie.css - Nouveau Design du Modal Film */
-
 /* Override du modal de base */
 #movieModal .modal-content {
     padding: 0;
@@ -390,12 +388,6 @@
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
 
-.btn-watchlist:active {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: white;
-    box-shadow: 0 12px 28px rgba(59, 130, 246, 0.5);
-}
-
 .action-btn svg {
     width: 28px;
     height: 28px;
@@ -417,6 +409,19 @@
     font-weight: 600;
     white-space: nowrap;
     color: var(--text-secondary);
+}
+
+@keyframes likeHeartBeat {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.action-btn.active i, 
+.action-btn.active .btn-icon {
+    animation: likeHeartBeat 0.5s;
 }
 
 /* Sections */

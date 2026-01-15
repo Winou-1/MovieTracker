@@ -14,10 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // L'événement est déjà sur le bouton via onclick="handleAuthSubmit()"
     }
     
-    const avatarUpload = document.getElementById('avatarUpload');
-    if (avatarUpload) {
-        avatarUpload.addEventListener('change', handleAvatarUpload);
-    }
 
     // Navigation Desktop
     document.getElementById('navFilms').addEventListener('click', (e) => {

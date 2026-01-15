@@ -1,7 +1,7 @@
 /* ==================== HEADER ==================== */
 header {
     background: linear-gradient(180deg, var(--bg-elevated) 0%, rgba(31, 35, 39, 0.95) 100%);
-    padding: 20px 0;
+    padding-top: env(safe-area-inset-top);
     border-bottom: 1px solid rgba(68, 85, 102, 0.3);
     position: sticky;
     top: 0;
@@ -85,15 +85,15 @@ nav {
     gap: 12px;
     padding: 8px 16px 8px 20px;
     border-radius: 50px;
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(59, 131, 246, 0.04);
     border: 2px solid rgba(59, 130, 246, 0.3);
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
 #userMenu:hover {
-    background: rgba(59, 130, 246, 0.15);
-    border-color: rgba(59, 130, 246, 0.5);
+    /*background: rgba(59, 130, 246, 0.15);*/
+    /*border-color: rgba(59, 130, 246, 0.5);*/
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
@@ -111,8 +111,8 @@ nav {
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--primary);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
     transition: all 0.3s ease;
 }
 

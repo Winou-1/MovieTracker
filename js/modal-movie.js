@@ -37,6 +37,26 @@ async function loadMovieDetails(movieId) {
         const movieRes = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
         const movie = await movieRes.json();
         
+        // 2. ✅ AJOUT : Vérifier si l'utilisateur a liké ce film (si connecté)
+        let isLiked = false;
+        if (getToken()) {
+            const likeStatus = await apiRequest(`/likes/${movieId}`);
+            if (likeStatus) isLiked = likeStatus.liked;
+        }
+
+        // 3. Génération du HTML
+        const modalContent = document.querySelector('#movieModal .modal-content');
+        
+        // Dans ton HTML généré (innerHTML), assure-toi que le bouton cœur ressemble à ça :
+        /*
+        <button class="action-btn ${isLiked ? 'active' : ''}" onclick="toggleLike(this)" id="likeBtn">
+            <span class="btn-icon">
+                ${isLiked ? '❤️' : '🤍'} 
+                </span>
+            <span>J'aime</span>
+        </button>
+        */
+       
         // Charger les crédits
         const creditsRes = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${CONFIG.TMDB_API_KEY}`);
         const credits = await creditsRes.json();
@@ -104,7 +124,7 @@ async function loadMovieDetails(movieId) {
             }
         }
         
-        renderMovieModal(movie, credits, suggestedMovies, movie.belongs_to_collection ? true : false);
+        renderMovieModal(movie, credits, suggestedMovies, movie.belongs_to_collection ? true : false, isLiked);
         
     } catch (error) {
         console.error(error);
@@ -112,8 +132,7 @@ async function loadMovieDetails(movieId) {
     }
 }
 
-function renderMovieModal(movie, credits, suggestedMovies, isCollection) {
-    const modalContent = document.querySelector('#movieModal .modal-content');
+function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked = false) {    const modalContent = document.querySelector('#movieModal .modal-content');
     const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
     const isWatched = state.watched.some(w => w.movie_id == movie.id);
     
@@ -136,10 +155,10 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection) {
             </button>
             
             <!-- Heart Button -->
-            <button class="modal-heart-btn ${inWatchlist ? 'active' : ''}" 
-                    onclick="toggleWatchlistFromModal(${movie.id}, '${movie.title.replace(/'/g, "\\'")}', '${movie.poster_path}')">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="${inWatchlist ? 'currentColor' : 'none'}">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <button class="modal-heart-btn ${isLiked ? 'active' : ''}" 
+                    onclick="toggleLike(this)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
             </button>
             
@@ -316,18 +335,11 @@ async function setupModalRatingStars(movieId, currentRating = 0) {
 }
 
 async function clearMovieRating(movieId) {
-    if (!confirm('Supprimer votre note ?')) return;
-    
     try {
         await apiRequest(`/ratings/${movieId}`, { method: 'DELETE' });
-        
-        // Reset stars
         const stars = document.querySelectorAll(`#modal-rating-${movieId} .modal-star-new`);
         stars.forEach(s => s.classList.remove('active'));
-        
-        // Hide clear button
         updateClearButton(movieId, false);
-        
         showToast('Note supprimée');
     } catch (error) {
         showToast('Erreur lors de la suppression', 'error');
@@ -368,7 +380,6 @@ async function toggleWatchlistFromModal(movieId, title, posterPath) {
     if (!getToken()) return;
     
     const btn = document.getElementById(`modal-btn-watchlist-${movieId}`);
-    const heartBtn = document.querySelector('.modal-heart-btn');
     
     if (btn) {
         btn.style.transform = 'scale(0.85)';
@@ -386,7 +397,6 @@ async function toggleWatchlistFromModal(movieId, title, posterPath) {
             state.watchlist.splice(index, 1);
             showToast('Retiré de la watchlist');
             if (btn) btn.classList.remove('active');
-            if (heartBtn) heartBtn.classList.remove('active');
         } else {
             await apiRequest('/watchlist', {
                 method: 'POST',
@@ -395,7 +405,6 @@ async function toggleWatchlistFromModal(movieId, title, posterPath) {
             state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
             showToast('Ajouté à la watchlist');
             if (btn) btn.classList.add('active');
-            if (heartBtn) heartBtn.classList.add('active');
         }
     } catch (error) {
         showToast('Erreur', 'error');
@@ -499,3 +508,46 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.style.display = 'none';
     }
 });
+async function toggleLike(btnElement) {
+    if (!getToken()) {
+        showToast('Connecte-toi pour aimer ce film', 'error');
+        return;
+    }
+
+    const movieId = currentMovieId; 
+    const isLiked = btnElement.classList.contains('active');
+    
+    // Animation UI immédiate
+    btnElement.classList.toggle('active');
+    
+    // ✅ Mise à jour du SVG (Plein vs Vide)
+    const svg = btnElement.querySelector('svg');
+    if(svg) {
+        // Si on vient d'activer (isLiked était false), on met fill="currentColor"
+        // Sinon on met fill="none"
+        svg.setAttribute('fill', !isLiked ? 'currentColor' : 'none');
+    }
+
+    try {
+        let result;
+        if (isLiked) {
+            // On retire le like
+            result = await apiRequest(`/likes/${movieId}`, { method: 'DELETE' });
+        } else {
+            // On ajoute le like
+            result = await apiRequest('/likes', {
+                method: 'POST',
+                body: JSON.stringify({ movie_id: movieId })
+            });
+        }
+
+        if (!result) {
+            // Si erreur, on annule le changement visuel
+            btnElement.classList.toggle('active');
+            showToast('Erreur de connexion', 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        btnElement.classList.toggle('active'); // Revert
+    }
+}

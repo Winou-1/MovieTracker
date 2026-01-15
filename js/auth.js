@@ -74,32 +74,44 @@ function logout() {
 async function loadUserData() {
     if (!getToken()) return;
 
-    // ✅ Charger le profil complet (avec avatar)
-    const profileData = await apiRequest('/profile');
-    if (profileData) {
-        state.user = profileData;
-        state.userProfile.username = profileData.username;
-        state.userProfile.email = profileData.email;
-        state.userProfile.avatar = profileData.avatar;
+    try {
+        // ✅ Charger le profil complet (avec avatar)
+        const profileData = await apiRequest('/profile');
+        if (profileData) {
+            state.user = profileData;
+            state.userProfile.username = profileData.username;
+            state.userProfile.email = profileData.email;
+            state.userProfile.avatar = profileData.avatar;
+            
+            // ✅ Mettre à jour l'avatar dans le header
+            updateHeaderAvatar();
+        }
+
+        // Charger les stats UNIQUEMENT si les éléments existent
+        const stats = await apiRequest('/stats');
+        if (stats) {
+            // ✅ Vérifier que les éléments existent avant de modifier textContent
+            const statRated = document.getElementById('statRated');
+            const statAverage = document.getElementById('statAverage');
+            const statReviews = document.getElementById('statReviews');
+            const statWatchlist = document.getElementById('statWatchlist');
+            
+            if (statRated) statRated.textContent = stats.rated_count;
+            if (statAverage) statAverage.textContent = stats.average_rating;
+            if (statReviews) statReviews.textContent = stats.reviews_count;
+            if (statWatchlist) statWatchlist.textContent = stats.watchlist_count;
+        }
+
+        // Charger watchlist et watched
+        const watchlist = await apiRequest('/watchlist');
+        if (watchlist) state.watchlist = watchlist;
+
+        const watched = await apiRequest('/watched');
+        if (watched) state.watched = watched;
         
-        // ✅ Mettre à jour l'avatar dans le header
-        updateHeaderAvatar();
+    } catch (error) {
+        console.error('Erreur chargement données utilisateur:', error);
     }
-
-    // Charger les stats
-    const stats = await apiRequest('/stats');
-    if (stats) {
-        document.getElementById('statRated').textContent = stats.rated_count;
-        document.getElementById('statAverage').textContent = stats.average_rating;
-        document.getElementById('statReviews').textContent = stats.reviews_count;
-        document.getElementById('statWatchlist').textContent = stats.watchlist_count;
-    }
-
-    const watchlist = await apiRequest('/watchlist');
-    if (watchlist) state.watchlist = watchlist;
-
-    const watched = await apiRequest('/watched');
-    if (watched) state.watched = watched;
 }
 
 

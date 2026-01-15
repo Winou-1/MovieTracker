@@ -16,7 +16,8 @@ function isPWAInstalled() {
     // Standalone mode = app installée
     return window.matchMedia('(display-mode: standalone)').matches ||
            window.navigator.standalone === true ||
-           document.referrer.includes('android-app://');
+           document.referrer.includes('android-app://') 
+           || true;
 }
 
 // ✅ Afficher l'écran d'installation

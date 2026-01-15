@@ -130,9 +130,16 @@ function switchView(view) {
             loadWatched();
             break;
         case 'profile':
-            document.getElementById('profileSection').style.display = 'block';
-            document.getElementById('mobileNavProfile')?.classList.add('active');
-            loadProfile();
+            moviesSection.style.display = 'none';
+            swiperSection.style.display = 'none';
+            watchlistSection.style.display = 'none';
+            watchedSection.style.display = 'none';
+            profileSection.style.display = 'block';
+            
+            // Appeler initProfile au lieu de loadProfile
+            if (typeof initProfile === 'function') {
+                initProfile();
+            }
             break;
         case 'swiper':
             document.getElementById('swiperSection').style.display = 'block';
