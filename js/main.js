@@ -7,8 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         openAuthModal(!isLoginMode);
     });
-    document.getElementById('authForm').addEventListener('submit', handleAuth);
-    document.getElementById('avatarUpload').addEventListener('change', handleAvatarUpload);
+    
+    // ✅ Utiliser un bouton submit au lieu d'un form
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    if (authSubmitBtn) {
+        // L'événement est déjà sur le bouton via onclick="handleAuthSubmit()"
+    }
+    
+    const avatarUpload = document.getElementById('avatarUpload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', handleAvatarUpload);
+    }
 
     // Navigation Desktop
     document.getElementById('navFilms').addEventListener('click', (e) => {

@@ -1,6 +1,16 @@
-// install-guard.js - Système de garde PWA et Auth obligatoire
+// install-guard.js - Système de garde PWA et Auth obligatoire (VERSION NON-BLOQUANTE)
 
 let deferredPrompt = null;
+
+// ✅ DÉTECTER SI ON EST SUR PC OU MOBILE
+function isDesktop() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+    const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
+    const isSmallScreen = window.innerWidth <= 1024;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    return !isMobileUA && (!isTouchDevice || !isSmallScreen);
+}
 
 // Vérifier si l'app est installée
 function isPWAInstalled() {
@@ -14,47 +24,63 @@ function isUserAuthenticated() {
     return !!localStorage.getItem('token');
 }
 
-// Initialiser le garde PWA
+// ⚠️ FONCTION LÉGÈRE : Juste vérifier et logger, ne pas bloquer
 function initPWAGuard() {
     const isInstalled = isPWAInstalled();
     const isAuthenticated = isUserAuthenticated();
+    const desktop = isDesktop();
 
-    console.log('PWA Installée:', isInstalled);
-    console.log('Utilisateur authentifié:', isAuthenticated);
+    console.log('🖥️ Desktop:', desktop);
+    console.log('📱 PWA Installée:', isInstalled);
+    console.log('👤 Authentifié:', isAuthenticated);
 
-    // Si pas installée, afficher l'écran d'installation
+    // Sur PC : Ne rien faire, laisser l'app se charger normalement
+    if (desktop) {
+        console.log('💻 Mode PC - Pas de garde PWA');
+        // L'authentification sera gérée par main.js
+        return;
+    }
+
+    // Sur Mobile : Vérifier l'installation uniquement
     if (!isInstalled) {
+        console.log('📱 Mobile non installé - Affichage écran installation');
         showInstallScreen();
         return;
     }
 
-    // Si installée mais pas authentifié, forcer l'authentification
-    if (!isAuthenticated) {
-        forceAuthentication();
+    console.log('✅ Mobile installé - App chargée normalement');
+    // L'authentification sera gérée par main.js
+}
+
+// Afficher l'écran d'installation PWA (SEULEMENT sur mobile non installé)
+function showInstallScreen() {
+    // Attendre que le DOM soit prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showInstallScreen);
         return;
     }
 
-    // Sinon, laisser accès à l'app normale
-    showMainApp();
-}
-
-// Afficher l'écran d'installation PWA
-function showInstallScreen() {
     // Masquer tout le contenu existant
-    document.body.innerHTML = '';
+    const body = document.body;
+    body.innerHTML = '';
     
     const installScreen = document.createElement('div');
     installScreen.id = 'pwa-install-screen';
     installScreen.innerHTML = `
         <style>
             #pwa-install-screen {
-                min-height: 100vh;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                z-index: 999999;
             }
             .install-card {
                 background: white;
@@ -111,7 +137,7 @@ function showInstallScreen() {
                 color: white;
                 border: none;
                 border-radius: 12px;
-                fontSize: 16px;
+                font-size: 16px;
                 font-weight: 600;
                 cursor: pointer;
                 transition: transform 0.2s;
@@ -119,9 +145,6 @@ function showInstallScreen() {
             }
             .install-button:hover {
                 transform: translateY(-2px);
-            }
-            .install-button:active {
-                transform: translateY(0);
             }
             .install-requirement {
                 font-size: 13px;
@@ -140,16 +163,6 @@ function showInstallScreen() {
             }
             .install-instructions.show {
                 display: block;
-            }
-            .install-instructions h4 {
-                margin-bottom: 12px;
-                color: #2d3748;
-            }
-            .install-instructions ul {
-                margin-left: 20px;
-            }
-            .install-instructions li {
-                margin-bottom: 8px;
             }
         </style>
         
@@ -173,12 +186,12 @@ function showInstallScreen() {
                 </div>
             </div>
 
-            <button class="install-button" onclick="triggerInstall()">
+            <button class="install-button" onclick="window.triggerPWAInstall()">
                 📲 Installer l'application
             </button>
 
             <p class="install-requirement">
-                Installation requise pour continuer
+                Installation requise pour continuer sur mobile
             </p>
 
             <div class="install-instructions" id="installInstructions">
@@ -192,94 +205,74 @@ function showInstallScreen() {
         </div>
     `;
     
-    document.body.appendChild(installScreen);
+    body.appendChild(installScreen);
 }
 
 // Déclencher l'installation PWA
-window.triggerInstall = async function() {
+window.triggerPWAInstall = async function() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
-            console.log('Installation acceptée');
+            console.log('✅ Installation acceptée');
             deferredPrompt = null;
-            // Attendre un peu puis recharger
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         }
     } else {
-        // Afficher les instructions manuelles
-        document.getElementById('installInstructions').classList.add('show');
+        const instructions = document.getElementById('installInstructions');
+        if (instructions) {
+            instructions.classList.add('show');
+        }
     }
 };
-
-// Forcer l'authentification
-function forceAuthentication() {
-    // Masquer le contenu principal
-    const mainContent = document.querySelector('main');
-    const header = document.querySelector('header');
-    const mobileNav = document.querySelector('.mobile-nav');
-    
-    if (mainContent) mainContent.style.display = 'none';
-    if (header) header.style.display = 'none';
-    if (mobileNav) mobileNav.style.display = 'none';
-    
-    // Ouvrir le modal d'authentification en mode forcé
-    setTimeout(() => {
-        openAuthModal(true);
-        
-        // Empêcher la fermeture du modal
-        const closeBtn = document.getElementById('closeAuthModal');
-        if (closeBtn) {
-            closeBtn.style.display = 'none';
-        }
-        
-        // Empêcher la fermeture par clic extérieur
-        const authModal = document.getElementById('authModal');
-        if (authModal) {
-            authModal.onclick = (e) => {
-                e.stopPropagation();
-            };
-        }
-    }, 100);
-}
-
-// Afficher l'app principale
-function showMainApp() {
-    const mainContent = document.querySelector('main');
-    const header = document.querySelector('header');
-    const mobileNav = document.querySelector('.mobile-nav');
-    
-    if (mainContent) mainContent.style.display = 'block';
-    if (header) header.style.display = 'block';
-    if (mobileNav) mobileNav.style.display = 'flex';
-}
 
 // Capturer l'événement d'installation PWA
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    console.log('beforeinstallprompt déclenché');
+    console.log('📲 beforeinstallprompt déclenché');
 });
 
 // Détecter après installation
 window.addEventListener('appinstalled', () => {
-    console.log('App installée');
+    console.log('✅ App installée avec succès');
     setTimeout(() => {
         window.location.reload();
     }, 500);
 });
 
-// Initialiser au chargement
-document.addEventListener('DOMContentLoaded', () => {
-    initPWAGuard();
-});
-
-// Vérifier périodiquement l'authentification
-setInterval(() => {
-    if (isPWAInstalled() && !isUserAuthenticated()) {
-        forceAuthentication();
+// ⚠️ IMPORTANT : S'exécuter IMMÉDIATEMENT (avant DOMContentLoaded)
+// Pour bloquer l'affichage sur mobile non installé
+(function() {
+    // Vérification ultra-rapide au chargement du script
+    const desktop = isDesktop();
+    const installed = isPWAInstalled();
+    
+    console.log('🚀 Init rapide - Desktop:', desktop, 'Installed:', installed);
+    
+    // Si mobile ET non installé : bloquer immédiatement
+    if (!desktop && !installed) {
+        console.log('🛑 Blocage mobile non installé');
+        // Injecter un style pour masquer le body en attendant
+        const style = document.createElement('style');
+        style.textContent = 'body { opacity: 0; }';
+        document.head.appendChild(style);
+        
+        // Afficher l'écran d'installation dès que possible
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                showInstallScreen();
+            });
+        } else {
+            showInstallScreen();
+        }
+    } else {
+        // Laisser l'app se charger normalement
+        console.log('✅ Chargement normal de l\'app');
     }
-}, 5000);
+})();
+
+// Note : Plus besoin de DOMContentLoaded car la logique est dans l'IIFE ci-dessus

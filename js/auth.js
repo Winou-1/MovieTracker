@@ -15,8 +15,12 @@ function openAuthModal(isLogin = true) {
     switchText.textContent = isLogin ? 'Pas encore de compte ?' : 'Déjà inscrit ?';
     switchLink.textContent = isLogin ? 'S\'inscrire' : 'Se connecter';
 
-    document.getElementById('authForm').reset();
+    // Reset form
+    document.getElementById('authUsername').value = '';
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
     document.getElementById('authError').style.display = 'none';
+    
     modal.classList.add('active');
 }
 
@@ -96,4 +100,44 @@ async function loadUserData() {
 
     const watched = await apiRequest('/watched');
     if (watched) state.watched = watched;
+}
+
+
+
+
+// ✅ Fonction appelée par le bouton onclick
+async function handleAuthSubmit() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    const username = document.getElementById('authUsername').value;
+
+    const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
+    const body = isLoginMode 
+        ? { email, password }
+        : { username, email, password };
+
+    const data = await apiRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(body)
+    });
+
+    if (data && data.token) {
+        setToken(data.token);
+        
+        // ✅ Sauvegarder toutes les infos utilisateur (avec avatar)
+        state.user = data.user;
+        state.userProfile.username = data.user.username;
+        state.userProfile.email = data.user.email;
+        state.userProfile.avatar = data.user.avatar;
+        
+        document.getElementById('authModal').classList.remove('active');
+        updateUI();
+        loadUserData();
+        setupUserMenuClick();
+        showToast('Connexion réussie !');
+        switchView('movies');
+    } else {
+        document.getElementById('authError').textContent = data?.error || 'Erreur';
+        document.getElementById('authError').style.display = 'block';
+    }
 }
