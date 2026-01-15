@@ -1,6 +1,6 @@
 const CONFIG = {
-    //API_URL: 'http://localhost:3000/api',
-    API_URL: '/.netlify/functions/api',
+    API_URL: 'http://localhost:3000/api',
+    //API_URL: '/.netlify/functions/api',
     TMDB_API_KEY: 'f05382a7b84dc7c40d1965fb01e19f2b',
     TMDB_BASE_URL: 'https://api.themoviedb.org/3',
     TMDB_IMG_URL: 'https://image.tmdb.org/t/p/w500'

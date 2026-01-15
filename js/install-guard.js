@@ -1,156 +1,130 @@
-// install-guard.js - Système de garde PWA et Auth obligatoire (VERSION NON-BLOQUANTE)
+// install-guard.js - Système PWA simplifié pour mobile uniquement
 
 let deferredPrompt = null;
 
-// ✅ DÉTECTER SI ON EST SUR PC OU MOBILE
-function isDesktop() {
+// ✅ Détecter si on est sur mobile
+function isMobile() {
     const userAgent = navigator.userAgent.toLowerCase();
     const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
-    const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
-    const isSmallScreen = window.innerWidth <= 1024;
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    return !isMobileUA && (!isTouchDevice || !isSmallScreen);
+    
+    // RETRAIT du check "window.innerWidth <= 768" qui causait le bug sur PC
+    return mobileKeywords.some(keyword => userAgent.includes(keyword)); 
 }
 
-// Vérifier si l'app est installée
+// ✅ Vérifier si l'app est déjà installée
 function isPWAInstalled() {
+    // Standalone mode = app installée
     return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone ||
+           window.navigator.standalone === true ||
            document.referrer.includes('android-app://');
 }
 
-// Vérifier si l'utilisateur est connecté
-function isUserAuthenticated() {
-    return !!localStorage.getItem('token');
-}
-
-// ⚠️ FONCTION LÉGÈRE : Juste vérifier et logger, ne pas bloquer
-function initPWAGuard() {
-    const isInstalled = isPWAInstalled();
-    const isAuthenticated = isUserAuthenticated();
-    const desktop = isDesktop();
-
-    console.log('🖥️ Desktop:', desktop);
-    console.log('📱 PWA Installée:', isInstalled);
-    console.log('👤 Authentifié:', isAuthenticated);
-
-    // Sur PC : Ne rien faire, laisser l'app se charger normalement
-    if (desktop) {
-        console.log('💻 Mode PC - Pas de garde PWA');
-        // L'authentification sera gérée par main.js
-        return;
-    }
-
-    // Sur Mobile : Vérifier l'installation uniquement
-    if (!isInstalled) {
-        console.log('📱 Mobile non installé - Affichage écran installation');
-        showInstallScreen();
-        return;
-    }
-
-    console.log('✅ Mobile installé - App chargée normalement');
-    // L'authentification sera gérée par main.js
-}
-
-// Afficher l'écran d'installation PWA (SEULEMENT sur mobile non installé)
+// ✅ Afficher l'écran d'installation
 function showInstallScreen() {
-    // Attendre que le DOM soit prêt
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', showInstallScreen);
-        return;
-    }
-
-    // Masquer tout le contenu existant
-    const body = document.body;
-    body.innerHTML = '';
-    
-    const installScreen = document.createElement('div');
-    installScreen.id = 'pwa-install-screen';
-    installScreen.innerHTML = `
+    // Créer l'overlay d'installation
+    const installOverlay = document.createElement('div');
+    installOverlay.id = 'pwa-install-overlay';
+    installOverlay.innerHTML = `
         <style>
-            #pwa-install-screen {
+            #pwa-install-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100vh;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                z-index: 999999;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                z-index: 999999;
             }
+            
             .install-card {
                 background: white;
                 border-radius: 24px;
-                padding: 48px 32px;
-                max-width: 400px;
+                padding: 40px 28px;
+                max-width: 380px;
                 width: 100%;
                 text-align: center;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
                 animation: slideUp 0.5s ease;
             }
+            
             @keyframes slideUp {
                 from { opacity: 0; transform: translateY(30px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            
             .install-logo {
-                font-size: 64px;
+                font-size: 72px;
                 margin-bottom: 16px;
+                animation: bounce 2s infinite;
             }
+            
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+            
             .install-title {
                 font-size: 32px;
                 font-weight: 800;
                 color: #1a202c;
                 margin-bottom: 8px;
             }
+            
             .install-subtitle {
                 font-size: 16px;
                 color: #718096;
                 margin-bottom: 32px;
+                line-height: 1.5;
             }
+            
             .install-features {
                 display: flex;
                 flex-direction: column;
-                gap: 16px;
+                gap: 12px;
                 margin-bottom: 32px;
+                text-align: left;
             }
+            
             .install-feature {
                 display: flex;
                 align-items: center;
                 gap: 12px;
                 font-size: 15px;
                 color: #4a5568;
-                padding: 12px 16px;
+                padding: 12px;
                 background: #f7fafc;
                 border-radius: 12px;
             }
+            
             .feature-icon {
                 font-size: 24px;
+                flex-shrink: 0;
             }
+            
             .install-button {
                 width: 100%;
-                padding: 16px;
+                padding: 18px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 border: none;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: 600;
+                border-radius: 14px;
+                font-size: 17px;
+                font-weight: 700;
                 cursor: pointer;
-                transition: transform 0.2s;
-                margin-bottom: 16px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                transition: transform 0.2s, box-shadow 0.2s;
             }
-            .install-button:hover {
-                transform: translateY(-2px);
+            
+            .install-button:active {
+                transform: scale(0.98);
+                box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
             }
-            .install-requirement {
-                font-size: 13px;
-                color: #a0aec0;
-                font-style: italic;
-            }
+            
             .install-instructions {
                 margin-top: 20px;
                 padding: 16px;
@@ -161,118 +135,158 @@ function showInstallScreen() {
                 color: #4a5568;
                 display: none;
             }
+            
             .install-instructions.show {
                 display: block;
+                animation: fadeIn 0.3s ease;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            .install-instructions h4 {
+                margin: 0 0 12px 0;
+                font-size: 15px;
+                font-weight: 700;
+                color: #2d3748;
+            }
+            
+            .install-instructions ul {
+                margin: 0;
+                padding-left: 20px;
+            }
+            
+            .install-instructions li {
+                margin-bottom: 8px;
+                line-height: 1.5;
+            }
+            
+            .install-instructions strong {
+                color: #667eea;
             }
         </style>
         
         <div class="install-card">
             <div class="install-logo">🎬</div>
             <h1 class="install-title">CineTrack</h1>
-            <p class="install-subtitle">Ton journal de films personnalisé</p>
+            <p class="install-subtitle">
+                Installe l'application pour une expérience optimale
+            </p>
             
             <div class="install-features">
                 <div class="install-feature">
                     <span class="feature-icon">📱</span>
-                    <span>Accès hors ligne</span>
+                    <span>Accès rapide depuis ton écran d'accueil</span>
                 </div>
                 <div class="install-feature">
                     <span class="feature-icon">⚡</span>
-                    <span>Rapide et fluide</span>
+                    <span>Navigation ultra rapide et fluide</span>
                 </div>
                 <div class="install-feature">
                     <span class="feature-icon">🔔</span>
-                    <span>Notifications</span>
+                    <span>Notifications pour tes films préférés</span>
                 </div>
             </div>
 
-            <button class="install-button" onclick="window.triggerPWAInstall()">
+            <button class="install-button" id="installButton">
                 📲 Installer l'application
             </button>
 
-            <p class="install-requirement">
-                Installation requise pour continuer sur mobile
-            </p>
-
             <div class="install-instructions" id="installInstructions">
-                <h4>Instructions d'installation :</h4>
+                <h4>📖 Instructions d'installation :</h4>
                 <ul>
-                    <li><strong>Chrome/Edge :</strong> Menu (⋮) → Installer l'application</li>
-                    <li><strong>Safari iOS :</strong> Partager → Sur l'écran d'accueil</li>
-                    <li><strong>Firefox :</strong> Menu → Installer</li>
+                    <li><strong>Chrome/Edge Android :</strong> Appuie sur le menu (⋮) puis "Installer l'application"</li>
+                    <li><strong>Safari iOS :</strong> Appuie sur Partager puis "Sur l'écran d'accueil"</li>
+                    <li><strong>Firefox :</strong> Appuie sur le menu puis "Installer"</li>
                 </ul>
             </div>
         </div>
     `;
     
-    body.appendChild(installScreen);
+    document.body.appendChild(installOverlay);
+    
+    // ✅ Gérer le clic sur le bouton d'installation
+    document.getElementById('installButton').addEventListener('click', triggerInstall);
 }
 
-// Déclencher l'installation PWA
-window.triggerPWAInstall = async function() {
+// ✅ Déclencher l'installation
+async function triggerInstall() {
+    const instructions = document.getElementById('installInstructions');
+    
     if (deferredPrompt) {
+        // Afficher le prompt natif du navigateur
         deferredPrompt.prompt();
+        
+        // Attendre le choix de l'utilisateur
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
             console.log('✅ Installation acceptée');
             deferredPrompt = null;
+            
+            // Fermer l'overlay après un court délai
             setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+                const overlay = document.getElementById('pwa-install-overlay');
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    overlay.style.transition = 'opacity 0.3s';
+                    setTimeout(() => overlay.remove(), 300);
+                }
+            }, 500);
+        } else {
+            console.log('❌ Installation refusée');
         }
     } else {
-        const instructions = document.getElementById('installInstructions');
-        if (instructions) {
-            instructions.classList.add('show');
-        }
+        // Si le prompt n'est pas disponible, afficher les instructions manuelles
+        instructions.classList.add('show');
+        document.getElementById('installButton').textContent = '📖 Voir les instructions ci-dessous';
     }
-};
+}
 
-// Capturer l'événement d'installation PWA
+// ✅ Capturer l'événement beforeinstallprompt
 window.addEventListener('beforeinstallprompt', (e) => {
+    // Empêcher le prompt par défaut
     e.preventDefault();
+    
+    // Sauvegarder l'événement pour l'utiliser plus tard
     deferredPrompt = e;
-    console.log('📲 beforeinstallprompt déclenché');
+    
+    console.log('📲 beforeinstallprompt capturé');
 });
 
-// Détecter après installation
+// ✅ Détecter l'installation réussie
 window.addEventListener('appinstalled', () => {
     console.log('✅ App installée avec succès');
-    setTimeout(() => {
-        window.location.reload();
-    }, 500);
+    deferredPrompt = null;
+    
+    // Fermer l'overlay si présent
+    const overlay = document.getElementById('pwa-install-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s';
+        setTimeout(() => overlay.remove(), 300);
+    }
 });
 
-// ⚠️ IMPORTANT : S'exécuter IMMÉDIATEMENT (avant DOMContentLoaded)
-// Pour bloquer l'affichage sur mobile non installé
-(function() {
-    // Vérification ultra-rapide au chargement du script
-    const desktop = isDesktop();
-    const installed = isPWAInstalled();
+// ✅ Initialisation au chargement
+(function init() {
+    console.log('🚀 Init PWA Guard');
+    console.log('📱 Mobile:', isMobile());
+    console.log('✅ Installée:', isPWAInstalled());
     
-    console.log('🚀 Init rapide - Desktop:', desktop, 'Installed:', installed);
-    
-    // Si mobile ET non installé : bloquer immédiatement
-    if (!desktop && !installed) {
-        console.log('🛑 Blocage mobile non installé');
-        // Injecter un style pour masquer le body en attendant
-        const style = document.createElement('style');
-        style.textContent = 'body { opacity: 0; }';
-        document.head.appendChild(style);
+    // Si c'est un mobile ET que l'app n'est pas installée
+    if (isMobile() && !isPWAInstalled()) {
+        console.log('🛑 Affichage écran installation');
         
-        // Afficher l'écran d'installation dès que possible
+        // Attendre que le DOM soit prêt
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                showInstallScreen();
-            });
+            document.addEventListener('DOMContentLoaded', showInstallScreen);
         } else {
             showInstallScreen();
         }
     } else {
-        // Laisser l'app se charger normalement
-        console.log('✅ Chargement normal de l\'app');
+        console.log('✅ Chargement normal');
     }
 })();
-
-// Note : Plus besoin de DOMContentLoaded car la logique est dans l'IIFE ci-dessus
