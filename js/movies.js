@@ -1,5 +1,3 @@
-// movies.js - Gestion des films (sans modal)
-
 async function loadPopularMovies(isScrollLoad = false) {
     const grid = document.getElementById('moviesGrid');
     const loader = document.querySelector('#infiniteScrollTrigger .loader');

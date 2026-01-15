@@ -11,15 +11,13 @@ const RECOMMENDATION_STRATEGY = {
     COLD_START_THRESHOLD: 5,
     LEARNING_THRESHOLD: 15,
     MATURE_THRESHOLD: 30,
-    
-    // Nombre de films à charger par batch (augmenté)
     BATCH_SIZE: 50,
     
     COLD_START_MIX: {
         topRated: 0.3,
         popular: 0.3,
         trending: 0.2,
-        upcoming: 0.2      // Nouveautés à venir
+        upcoming: 0.2
     },
     LEARNING_MIX: {
         personalized: 0.4,
@@ -30,12 +28,12 @@ const RECOMMENDATION_STRATEGY = {
     MATURE_MIX: {
         personalized: 0.5,
         diverse: 0.2,
-        similar: 0.15,     // Films similaires aux mieux notés
+        similar: 0.15,
         trending: 0.15
     }
 };
 
-// ✅ CACHE GLOBAL pour tracker TOUS les films déjà vus (même skip)
+// Cache GLOBAL pour tracker TOUS les films déjà vus (même skip)
 if (!state.seenMovieIds) {
     state.seenMovieIds = new Set();
 }
@@ -59,7 +57,7 @@ async function loadSwiperMovies() {
     const watchlistMovies = await apiRequest('/watchlist');
     const watchlistIds = watchlistMovies ? watchlistMovies.map(m => m.movie_id) : [];
     
-    // ✅ Ajouter les IDs à notre cache global
+    // Ajouter les IDs à notre cache global
     watchedIds.forEach(id => state.seenMovieIds.add(id));
     watchlistIds.forEach(id => state.seenMovieIds.add(id));
     
@@ -83,7 +81,7 @@ async function loadSwiperMovies() {
                 break;
         }
         
-        // ✅ Filtrer avec le cache global
+        // Filtrer avec le cache global
         const filteredMovies = allMovies.filter(m => !state.seenMovieIds.has(m.id));
         
         console.log(`📦 ${allMovies.length} films chargés → ${filteredMovies.length} après filtrage`);
@@ -97,7 +95,6 @@ async function loadSwiperMovies() {
         if (state.swiperMovies.length > 0) {
             displaySwiperMovie();
         } else {
-            // Si vraiment aucun film, réinitialiser le cache et recharger
             console.log('⚠️ Plus de films disponibles, réinitialisation du cache...');
             state.seenMovieIds.clear();
             watchedIds.forEach(id => state.seenMovieIds.add(id));
@@ -239,7 +236,7 @@ async function analyzeUserPreferences(watchedMovies) {
     const decadeCount = {};
     const allGenres = new Set();
 
-    const recentMovies = watchedMovies.slice(-30); // Analyser 30 derniers films
+    const recentMovies = watchedMovies.slice(-30);
 
     for (const movie of recentMovies) {
         try {
@@ -267,7 +264,7 @@ async function analyzeUserPreferences(watchedMovies) {
 
     const topGenres = Object.entries(genreCount)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5) // Top 5 au lieu de 3
+        .slice(0, 5)
         .map(([genreId, count]) => ({
             id: parseInt(genreId),
             count: count,
@@ -286,19 +283,14 @@ async function analyzeUserPreferences(watchedMovies) {
     };
 }
 
-// ============================================
-// NOUVELLES FONCTIONS DE RÉCUPÉRATION
-// ============================================
-
-// Récupérer plusieurs pages pour plus de diversité
 async function fetchMultiplePages(type, targetCount, filters = {}) {
     const movies = [];
-    const pagesToFetch = 5; // Récupérer 5 pages différentes
+    const pagesToFetch = 5;
     
     try {
         const promises = [];
         for (let i = 0; i < pagesToFetch; i++) {
-            const page = Math.floor(Math.random() * 20) + 1; // Pages 1-20
+            const page = Math.floor(Math.random() * 20) + 1;
             
             let url;
             if (type === 'top_rated') {
@@ -306,8 +298,6 @@ async function fetchMultiplePages(type, targetCount, filters = {}) {
             } else if (type === 'popular') {
                 url = `${CONFIG.TMDB_BASE_URL}/movie/popular?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&page=${page}`;
             }
-            
-            // Ajouter les filtres
             Object.entries(filters).forEach(([key, value]) => {
                 url += `&${key}=${value}`;
             });
@@ -359,7 +349,6 @@ async function fetchUpcomingMovies(count) {
 async function fetchPersonalizedByGenres(topGenres, count) {
     const movies = [];
     try {
-        // Pour chaque genre, récupérer des films
         for (const genre of topGenres.slice(0, 3)) {
             const page = Math.floor(Math.random() * 10) + 1;
             const response = await fetch(
@@ -380,8 +369,6 @@ async function fetchAdvancedPersonalized(preferences, count) {
     const movies = [];
     try {
         const genreIds = preferences.topGenres.slice(0, 3).map(g => g.id).join(',');
-        
-        // Essayer plusieurs combinaisons décennie + genre
         for (const decade of preferences.preferredDecades.slice(0, 2)) {
             const page = Math.floor(Math.random() * 10) + 1;
             const response = await fetch(
@@ -390,8 +377,6 @@ async function fetchAdvancedPersonalized(preferences, count) {
             const data = await response.json();
             if (data.results) movies.push(...data.results);
         }
-        
-        // Si pas assez, ajouter sans filtre décennie
         if (movies.length < count) {
             const page = Math.floor(Math.random() * 10) + 1;
             const response = await fetch(

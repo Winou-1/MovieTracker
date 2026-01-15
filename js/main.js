@@ -8,10 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
         openAuthModal(!isLoginMode);
     });
     
-    // ✅ Utiliser un bouton submit au lieu d'un form
+    //  Utiliser un bouton submit au lieu d'un form
     const authSubmitBtn = document.getElementById('authSubmitBtn');
     if (authSubmitBtn) {
-        // L'événement est déjà sur le bouton via onclick="handleAuthSubmit()"
     }
     
 
@@ -86,10 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = getToken();
     if (token) {
         state.token = token;
-        
-        // ✅ RÉCUPÉREZ LE USERNAME depuis localStorage
         const savedUsername = localStorage.getItem('username');
-        
         apiRequest('/stats').then(data => {
             if (data) {
                 state.user = { username: savedUsername || 'Utilisateur' };
@@ -97,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.userProfile.email = localStorage.getItem('userEmail') || '';
                 
                 updateUI();
-                loadUserData(); // ✅ Ceci chargera maintenant l'avatar automatiquement
+                loadUserData();
                 setupMobileProfileClick();
             }
         });
@@ -120,8 +116,6 @@ function setupMobileNavigation() {
             } else {
                 updateMobileNav(`mobileNav${item}`);
                 switchView(view === 'films' ? 'movies' : view);
-                
-                // ✅ On ajoute un état dans l'historique pour chaque changement de vue
                 window.history.pushState({ view: view === 'films' ? 'movies' : view }, '', '');
             }
         });

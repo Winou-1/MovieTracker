@@ -1,5 +1,3 @@
-// profile.js - Gestion du profil moderne - VERSION COMPLÈTE
-
 let profileData = {
     user: null,
     stats: {},
@@ -487,7 +485,7 @@ function toggleSetting(setting, element) {
     showToast(`${setting === 'notifications' ? 'Notifications' : 'Lecture auto'} ${profileData.settings[setting] ? 'activée' : 'désactivée'}`);
 }
 
-// ✅ Modifier le pseudo avec modal
+// Modifier le pseudo avec modal
 function editUsername() {
     const currentUsername = profileData.user.username;
     
@@ -575,7 +573,7 @@ async function saveNewUsername() {
     }
 }
 
-// ✅ Modifier l'avatar avec cropper
+// Modifier l'avatar avec cropper
 function editAvatar() {
     const input = document.createElement('input');
     input.type = 'file';

@@ -713,7 +713,6 @@
         border-radius: 24px;
     }
     
-    /* Modal username en desktop centré */
     #usernameEditModal.settings-modal.active {
         align-items: center;
         justify-content: center;

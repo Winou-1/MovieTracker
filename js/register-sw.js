@@ -1,5 +1,3 @@
-// register-sw.js - Enregistrement du Service Worker
-
 // Enregistrer le Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -14,23 +12,18 @@ async function registerServiceWorker() {
         });
 
         console.log('✓ Service Worker enregistré:', registration.scope);
-
-        // Vérifier les mises à jour
         registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // Nouvelle version disponible
                     showUpdateNotification();
                 }
             });
         });
-
-        // Vérifier les mises à jour périodiquement
         setInterval(() => {
             registration.update();
-        }, 60 * 60 * 1000); // Toutes les heures
+        }, 60 * 60 * 1000);
 
     } catch (error) {
         console.error('✗ Erreur Service Worker:', error);
@@ -85,8 +78,6 @@ function showUpdateNotification() {
     `;
 
     document.body.appendChild(updateBanner);
-
-    // Animation CSS
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slideUp {
@@ -108,13 +99,10 @@ window.reloadApp = function() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration().then((registration) => {
             if (registration && registration.waiting) {
-                // Demander au nouveau SW de prendre le contrôle
                 registration.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
         });
     }
-    
-    // Recharger la page
     window.location.reload();
 };
 

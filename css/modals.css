@@ -195,7 +195,6 @@
 /* --- Style de base commun --- */
 .movie-actions .btn {
     flex: 1;
-    /* On force une bordure solide de 2px */
     border-width: 2px;
     border-style: solid;
     font-weight: 700;

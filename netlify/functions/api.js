@@ -104,7 +104,7 @@ export async function handler(event, context) {
           id: user.id, 
           username: user.username, 
           email: user.email,
-          avatar: user.avatar // ✅ Retourne l'avatar
+          avatar: user.avatar
         }
       });
     }
@@ -118,7 +118,7 @@ export async function handler(event, context) {
 
     const userId = userData.userId;
 
-    // ✅ GET USER PROFILE (avec avatar)
+    // GET USER PROFILE
     if (path === '/profile' && method === 'GET') {
       const [user] = await sql`
         SELECT id, username, email, avatar, created_at
@@ -133,7 +133,7 @@ export async function handler(event, context) {
       return response(200, user);
     }
 
-    // ✅ UPDATE AVATAR
+    // UPDATE AVATAR
     if (path === '/profile/avatar' && method === 'PUT') {
       const { avatar } = body;
 
@@ -141,7 +141,6 @@ export async function handler(event, context) {
         return response(400, { error: 'Avatar requis' });
       }
 
-      // Vérifier la taille (limiter à ~1MB en base64)
       if (avatar.length > 1500000) {
         return response(400, { error: 'Image trop volumineuse (max 1MB)' });
       }
@@ -159,7 +158,7 @@ export async function handler(event, context) {
       });
     }
 
-    // ✅ UPDATE USERNAME
+    // UPDATE USERNAME
     if (path === '/profile/username' && method === 'PUT') {
       const { username } = body;
 
@@ -300,6 +299,61 @@ export async function handler(event, context) {
       `;
 
       return response(200, item);
+    }
+
+    // ==================== LIKES ROUTES ====================
+
+    // Get all likes for user
+    if (path === '/likes/all' && method === 'GET') {
+      const likes = await sql`
+        SELECT movie_id, created_at
+        FROM likes
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `;
+      return response(200, likes);
+    }
+
+    // Check if movie is liked (doit être AVANT le DELETE)
+    if (path.startsWith('/likes/') && path !== '/likes/all' && method === 'GET') {
+      const movieId = path.split('/')[2];
+      
+      const [like] = await sql`
+        SELECT id FROM likes
+        WHERE user_id = ${userId} AND movie_id = ${movieId}
+      `;
+      
+      return response(200, { liked: !!like });
+    }
+
+    // Add like
+    if (path === '/likes' && method === 'POST') {
+      const { movie_id } = body;
+      
+      if (!movie_id) {
+        return response(400, { error: 'movie_id requis' });
+      }
+      
+      const [like] = await sql`
+        INSERT INTO likes (user_id, movie_id)
+        VALUES (${userId}, ${movie_id})
+        ON CONFLICT (user_id, movie_id) DO NOTHING
+        RETURNING *
+      `;
+      
+      return response(200, { message: 'Film liké', liked: true });
+    }
+
+    // Remove like
+    if (path.startsWith('/likes/') && path !== '/likes/all' && method === 'DELETE') {
+      const movieId = path.split('/')[2];
+      
+      await sql`
+        DELETE FROM likes
+        WHERE user_id = ${userId} AND movie_id = ${movieId}
+      `;
+      
+      return response(200, { message: 'Like retiré', liked: false });
     }
 
     return response(404, { error: 'Route non trouvée' });

@@ -1,5 +1,3 @@
-// modal-movie.js - Modal Film Redesigné avec Swipe et Suggestions
-
 let currentMovieId = null;
 let touchStartX = 0;
 let touchEndX = 0;
@@ -9,22 +7,14 @@ async function showMovieDetails(movieId) {
     currentMovieId = movieId;
     const modal = document.getElementById('movieModal');
     const modalContent = modal.querySelector('.modal-content');
-    
-    // Reset swipe position
     modalSwipeOffset = 0;
     if (modalContent) {
         modalContent.style.transform = 'translateX(0)';
     }
     
     modal.classList.add('active');
-    
-    // Charger les données
     await loadMovieDetails(movieId);
-    
-    // Setup swipe
     setupModalSwipe();
-    
-    // Setup back button
     setupBackButton();
 }
 
@@ -33,35 +23,17 @@ async function loadMovieDetails(movieId) {
     modalContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     
     try {
-        // Charger le film avec tous les détails
         const movieRes = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
         const movie = await movieRes.json();
-        
-        // 2. ✅ AJOUT : Vérifier si l'utilisateur a liké ce film (si connecté)
         let isLiked = false;
         if (getToken()) {
             const likeStatus = await apiRequest(`/likes/${movieId}`);
             if (likeStatus) isLiked = likeStatus.liked;
         }
-
-        // 3. Génération du HTML
         const modalContent = document.querySelector('#movieModal .modal-content');
-        
-        // Dans ton HTML généré (innerHTML), assure-toi que le bouton cœur ressemble à ça :
-        /*
-        <button class="action-btn ${isLiked ? 'active' : ''}" onclick="toggleLike(this)" id="likeBtn">
-            <span class="btn-icon">
-                ${isLiked ? '❤️' : '🤍'} 
-                </span>
-            <span>J'aime</span>
-        </button>
-        */
-       
         // Charger les crédits
         const creditsRes = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${CONFIG.TMDB_API_KEY}`);
         const credits = await creditsRes.json();
-        
-        // Stratégie de suggestions intelligente
         let suggestedMovies = [];
         
         // 1. Essayer la collection d'abord (pour les sagas)
@@ -74,7 +46,6 @@ async function loadMovieDetails(movieId) {
                 const collectionMovies = collectionData.parts?.filter(m => m.id !== movieId) || [];
                 
                 if (collectionMovies.length > 0) {
-                    // Trier par date de sortie
                     suggestedMovies = collectionMovies.sort((a, b) => {
                         return new Date(a.release_date) - new Date(b.release_date);
                     }).slice(0, 6);
@@ -111,7 +82,6 @@ async function loadMovieDetails(movieId) {
                     `${CONFIG.TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
                 );
                 const similar = await similarRes.json();
-                
                 if (similar.results && similar.results.length > 0) {
                     const remaining = 6 - suggestedMovies.length;
                     const similarToAdd = similar.results
@@ -125,7 +95,6 @@ async function loadMovieDetails(movieId) {
         }
         
         renderMovieModal(movie, credits, suggestedMovies, movie.belongs_to_collection ? true : false, isLiked);
-        
     } catch (error) {
         console.error(error);
         modalContent.innerHTML = '<div class="error">Erreur de chargement</div>';
@@ -135,13 +104,9 @@ async function loadMovieDetails(movieId) {
 function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked = false) {    const modalContent = document.querySelector('#movieModal .modal-content');
     const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
     const isWatched = state.watched.some(w => w.movie_id == movie.id);
-    
-    // Récupérer la note actuelle
     const currentRating = getUserRating(movie.id);
-    
     const poster = movie.poster_path ? `${CONFIG.TMDB_IMG_URL}${movie.poster_path}` : '';
     const backdrop = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : poster;
-    
     // Cast (8 premiers acteurs)
     const cast = credits.cast?.slice(0, 8) || [];
     
@@ -292,8 +257,6 @@ function getUserRating(movieId) {
 async function setupModalRatingStars(movieId, currentRating = 0) {
     const container = document.getElementById(`modal-rating-${movieId}`);
     if (!container) return;
-    
-    // Récupérer la note réelle depuis l'API
     try {
         const data = await apiRequest(`/ratings/${movieId}`);
         if (data && data.rating) {
@@ -369,7 +332,7 @@ function updateClearButton(movieId, show) {
     }
 }
 
-// Nouvelle fonction pour ouvrir Wikipedia de l'acteur
+//fonction pour ouvrir Wikipedia de l'acteur
 function openActorWikipedia(actorName) {
     const encodedName = encodeURIComponent(actorName);
     window.open(`https://fr.wikipedia.org/wiki/${encodedName}`, '_blank');
@@ -520,21 +483,17 @@ async function toggleLike(btnElement) {
     // Animation UI immédiate
     btnElement.classList.toggle('active');
     
-    // ✅ Mise à jour du SVG (Plein vs Vide)
+    // Mise à jour du SVG (Plein vs Vide)
     const svg = btnElement.querySelector('svg');
     if(svg) {
-        // Si on vient d'activer (isLiked était false), on met fill="currentColor"
-        // Sinon on met fill="none"
         svg.setAttribute('fill', !isLiked ? 'currentColor' : 'none');
     }
 
     try {
         let result;
         if (isLiked) {
-            // On retire le like
             result = await apiRequest(`/likes/${movieId}`, { method: 'DELETE' });
         } else {
-            // On ajoute le like
             result = await apiRequest('/likes', {
                 method: 'POST',
                 body: JSON.stringify({ movie_id: movieId })
@@ -542,12 +501,11 @@ async function toggleLike(btnElement) {
         }
 
         if (!result) {
-            // Si erreur, on annule le changement visuel
             btnElement.classList.toggle('active');
             showToast('Erreur de connexion', 'error');
         }
     } catch (error) {
         console.error(error);
-        btnElement.classList.toggle('active'); // Revert
+        btnElement.classList.toggle('active');
     }
 }

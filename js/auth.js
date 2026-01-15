@@ -43,8 +43,6 @@ async function handleAuth(e) {
 
     if (data && data.token) {
         setToken(data.token);
-        
-        // ✅ Sauvegarder toutes les infos utilisateur (avec avatar)
         state.user = data.user;
         state.userProfile.username = data.user.username;
         state.userProfile.email = data.user.email;
@@ -75,34 +73,25 @@ async function loadUserData() {
     if (!getToken()) return;
 
     try {
-        // ✅ Charger le profil complet (avec avatar)
         const profileData = await apiRequest('/profile');
         if (profileData) {
             state.user = profileData;
             state.userProfile.username = profileData.username;
             state.userProfile.email = profileData.email;
             state.userProfile.avatar = profileData.avatar;
-            
-            // ✅ Mettre à jour l'avatar dans le header
             updateHeaderAvatar();
         }
-
-        // Charger les stats UNIQUEMENT si les éléments existent
         const stats = await apiRequest('/stats');
         if (stats) {
-            // ✅ Vérifier que les éléments existent avant de modifier textContent
             const statRated = document.getElementById('statRated');
             const statAverage = document.getElementById('statAverage');
             const statReviews = document.getElementById('statReviews');
             const statWatchlist = document.getElementById('statWatchlist');
-            
             if (statRated) statRated.textContent = stats.rated_count;
             if (statAverage) statAverage.textContent = stats.average_rating;
             if (statReviews) statReviews.textContent = stats.reviews_count;
             if (statWatchlist) statWatchlist.textContent = stats.watchlist_count;
         }
-
-        // Charger watchlist et watched
         const watchlist = await apiRequest('/watchlist');
         if (watchlist) state.watchlist = watchlist;
 
@@ -114,10 +103,6 @@ async function loadUserData() {
     }
 }
 
-
-
-
-// ✅ Fonction appelée par le bouton onclick
 async function handleAuthSubmit() {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
@@ -135,8 +120,6 @@ async function handleAuthSubmit() {
 
     if (data && data.token) {
         setToken(data.token);
-        
-        // ✅ Sauvegarder toutes les infos utilisateur (avec avatar)
         state.user = data.user;
         state.userProfile.username = data.user.username;
         state.userProfile.email = data.user.email;

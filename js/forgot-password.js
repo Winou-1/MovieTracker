@@ -1,14 +1,7 @@
-// forgot-password.js - Système de réinitialisation de mot de passe
-
-// Ajouter un lien "Mot de passe oublié" dans le modal d'authentification
 function addForgotPasswordLink() {
     const authForm = document.getElementById('authForm');
     if (!authForm) return;
-    
-    // Vérifier si le lien existe déjà
     if (document.getElementById('forgotPasswordLink')) return;
-    
-    // Créer le lien
     const linkContainer = document.createElement('div');
     linkContainer.style.cssText = `
         text-align: center;
@@ -41,8 +34,6 @@ function addForgotPasswordLink() {
     };
     
     linkContainer.appendChild(forgotLink);
-    
-    // Insérer après le bouton submit
     const submitBtn = authForm.querySelector('button[type="submit"]');
     if (submitBtn) {
         submitBtn.parentNode.insertBefore(linkContainer, submitBtn.nextSibling);
@@ -51,10 +42,7 @@ function addForgotPasswordLink() {
 
 // Ouvrir le modal de mot de passe oublié
 function openForgotPasswordModal() {
-    // Fermer le modal d'auth actuel
     document.getElementById('authModal').classList.remove('active');
-    
-    // Créer ou afficher le modal de réinitialisation
     let forgotModal = document.getElementById('forgotPasswordModal');
     
     if (!forgotModal) {
@@ -102,7 +90,6 @@ function createForgotPasswordModal() {
         </div>
     `;
     
-    // Fermer au clic extérieur
     modal.onclick = (e) => {
         if (e.target === modal) {
             closeForgotPasswordModal();
@@ -140,19 +127,14 @@ async function sendPasswordResetEmail() {
         //     method: 'POST',
         //     body: JSON.stringify({ email })
         // });
-        
         // Simuler un délai
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Afficher le message de succès
         successDiv.innerHTML = `
             <strong>✓ Email envoyé !</strong><br>
             Un lien de réinitialisation a été envoyé à <strong>${email}</strong>.<br>
             Vérifiez votre boîte de réception (et vos spams).
         `;
         successDiv.style.display = 'block';
-        
-        // Vider le champ email
         document.getElementById('forgotEmail').value = '';
         
     } catch (error) {
@@ -178,7 +160,6 @@ window.backToLogin = function(e) {
 
 // Ajouter le lien au chargement
 document.addEventListener('DOMContentLoaded', () => {
-    // Observer les changements du modal d'auth
     const observer = new MutationObserver(() => {
         const authModal = document.getElementById('authModal');
         if (authModal && authModal.classList.contains('active')) {
@@ -191,8 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         subtree: true,
         attributeFilter: ['class']
     });
-    
-    // Ajouter immédiatement si le modal existe
     addForgotPasswordLink();
 });
 

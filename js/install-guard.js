@@ -1,28 +1,19 @@
-// install-guard.js - Système PWA simplifié pour mobile uniquement
-
 let deferredPrompt = null;
-
-// ✅ Détecter si on est sur mobile
 function isMobile() {
     const userAgent = navigator.userAgent.toLowerCase();
     const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
-    
-    // RETRAIT du check "window.innerWidth <= 768" qui causait le bug sur PC
     return mobileKeywords.some(keyword => userAgent.includes(keyword)); 
 }
 
-// ✅ Vérifier si l'app est déjà installée
 function isPWAInstalled() {
-    // Standalone mode = app installée
     return window.matchMedia('(display-mode: standalone)').matches ||
            window.navigator.standalone === true ||
            document.referrer.includes('android-app://') 
            || true;
 }
 
-// ✅ Afficher l'écran d'installation
+// Afficher l'écran d'installation
 function showInstallScreen() {
-    // Créer l'overlay d'installation
     const installOverlay = document.createElement('div');
     installOverlay.id = 'pwa-install-overlay';
     installOverlay.innerHTML = `
@@ -207,27 +198,19 @@ function showInstallScreen() {
     `;
     
     document.body.appendChild(installOverlay);
-    
-    // ✅ Gérer le clic sur le bouton d'installation
     document.getElementById('installButton').addEventListener('click', triggerInstall);
 }
 
-// ✅ Déclencher l'installation
+// Déclencher l'installation
 async function triggerInstall() {
     const instructions = document.getElementById('installInstructions');
     
     if (deferredPrompt) {
-        // Afficher le prompt natif du navigateur
         deferredPrompt.prompt();
-        
-        // Attendre le choix de l'utilisateur
         const { outcome } = await deferredPrompt.userChoice;
-        
         if (outcome === 'accepted') {
             console.log('✅ Installation acceptée');
             deferredPrompt = null;
-            
-            // Fermer l'overlay après un court délai
             setTimeout(() => {
                 const overlay = document.getElementById('pwa-install-overlay');
                 if (overlay) {
@@ -240,29 +223,22 @@ async function triggerInstall() {
             console.log('❌ Installation refusée');
         }
     } else {
-        // Si le prompt n'est pas disponible, afficher les instructions manuelles
         instructions.classList.add('show');
         document.getElementById('installButton').textContent = '📖 Voir les instructions ci-dessous';
     }
 }
 
-// ✅ Capturer l'événement beforeinstallprompt
+// Capturer l'événement beforeinstallprompt
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Empêcher le prompt par défaut
     e.preventDefault();
-    
-    // Sauvegarder l'événement pour l'utiliser plus tard
     deferredPrompt = e;
-    
     console.log('📲 beforeinstallprompt capturé');
 });
 
-// ✅ Détecter l'installation réussie
+// Détecter l'installation réussie
 window.addEventListener('appinstalled', () => {
     console.log('✅ App installée avec succès');
     deferredPrompt = null;
-    
-    // Fermer l'overlay si présent
     const overlay = document.getElementById('pwa-install-overlay');
     if (overlay) {
         overlay.style.opacity = '0';
@@ -271,17 +247,13 @@ window.addEventListener('appinstalled', () => {
     }
 });
 
-// ✅ Initialisation au chargement
+// Initialisation au chargement
 (function init() {
     console.log('🚀 Init PWA Guard');
     console.log('📱 Mobile:', isMobile());
     console.log('✅ Installée:', isPWAInstalled());
-    
-    // Si c'est un mobile ET que l'app n'est pas installée
     if (isMobile() && !isPWAInstalled()) {
         console.log('🛑 Affichage écran installation');
-        
-        // Attendre que le DOM soit prêt
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', showInstallScreen);
         } else {

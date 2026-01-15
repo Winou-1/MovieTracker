@@ -4,34 +4,25 @@ function updateUI() {
     document.getElementById('userMenu').style.display = isLoggedIn ? 'flex' : 'none';
 
     if (isLoggedIn && state.user) {
-        // ✅ Mettre à jour le nom d'utilisateur
         document.getElementById('usernameDisplay').textContent = state.userProfile.username || state.user.username;
-        
-        // ✅ Mettre à jour l'avatar
         updateHeaderAvatar();
         
         setupMobileProfileClick();
     }
 }
 
-// ✅ NOUVELLE FONCTION pour mettre à jour l'avatar du header
+//FONCTION pour mettre à jour l'avatar du header
 function updateHeaderAvatar() {
     const userMenu = document.getElementById('userMenu');
     const avatar = state.userProfile.avatar;
-    
-    // Chercher si un avatar existe déjà
     let avatarElement = userMenu.querySelector('.user-avatar');
     let placeholderElement = userMenu.querySelector('.user-avatar-placeholder');
     
     if (avatar) {
-        // Si on a un avatar, créer/mettre à jour l'élément img
         if (!avatarElement) {
-            // Créer l'élément avatar s'il n'existe pas
             avatarElement = document.createElement('img');
             avatarElement.className = 'user-avatar';
             avatarElement.alt = 'Avatar';
-            
-            // Supprimer le placeholder si présent
             if (placeholderElement) {
                 placeholderElement.remove();
             }
@@ -40,14 +31,10 @@ function updateHeaderAvatar() {
         }
         avatarElement.src = avatar;
     } else {
-        // Si pas d'avatar, afficher le placeholder
         if (!placeholderElement) {
-            // Créer le placeholder s'il n'existe pas
             placeholderElement = document.createElement('div');
             placeholderElement.className = 'user-avatar-placeholder';
             placeholderElement.textContent = '👤';
-            
-            // Supprimer l'img si présente
             if (avatarElement) {
                 avatarElement.remove();
             }
@@ -80,10 +67,7 @@ function setupMobileProfileClick() {
             }
         });
     } else {
-        // Desktop : tout le menu est cliquable
         userMenu.style.cursor = 'pointer';
-        
-        // Cloner pour supprimer les anciens événements
         const newUserMenu = userMenu.cloneNode(true);
         userMenu.parentNode.replaceChild(newUserMenu, userMenu);
         
@@ -136,7 +120,6 @@ function switchView(view) {
             watchedSection.style.display = 'none';
             profileSection.style.display = 'block';
             
-            // Appeler initProfile au lieu de loadProfile
             if (typeof initProfile === 'function') {
                 initProfile();
             }
