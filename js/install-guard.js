@@ -9,7 +9,7 @@ function isPWAInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches ||
            window.navigator.standalone === true ||
            document.referrer.includes('android-app://') 
-           || true;
+           //|| true;
 }
 
 // Afficher l'écran d'installation
