@@ -92,6 +92,15 @@ function switchView(view) {
     document.getElementById('profileSection').style.display = 'none';
     document.getElementById('swiperSection').style.display = 'none';
 
+    // Gérer l'affichage du widget de recherche flottant
+    const searchWidget = document.getElementById('searchWidget');
+    if (view === 'watchlist' || view === 'watched') {
+        searchWidget.style.display = 'flex';
+    } else {
+        searchWidget.style.display = 'none';
+        searchWidget.classList.remove('active');
+    }
+
     document.querySelectorAll('.mobile-nav-item').forEach(item => {
         item.classList.remove('active');
     });

@@ -303,9 +303,18 @@ function closeWatchlistDropdownOutside(e) {
 function applyWatchlistFilters() {
     const sortBy = document.getElementById('watchlistSortBy').value;
     const genreFilter = document.getElementById('watchlistGenreFilter').value;
+    const searchQuery = document.getElementById('watchlistSearchInput').value.toLowerCase().trim();
     
     let filtered = [...state.watchlistWithDetails];
 
+    // Filtrer par recherche
+    if (searchQuery) {
+        filtered = filtered.filter(movie => 
+            movie.title && movie.title.toLowerCase().includes(searchQuery)
+        );
+    }
+
+    // Filtrer par genre
     if (genreFilter !== 'all') {
         filtered = filtered.filter(movie => 
             movie.genres && movie.genres.some(g => g.id == genreFilter)
@@ -328,7 +337,7 @@ function applyWatchlistFilters() {
         }
     });
 
-    if (genreFilter === 'all' && sortBy.includes('title')) {
+    if (genreFilter === 'all' && sortBy.includes('title') && !searchQuery) {
         displayMoviesWithSeparators(filtered, 'watchlistGrid', 'title');
     } else {
         displayMovies(filtered, 'watchlistGrid');
@@ -413,6 +422,7 @@ function setupWatchedFilterListeners() {
     const sortBy = document.getElementById('watchedSortBy');
     const genreFilter = document.getElementById('watchedGenreFilter');
     const gridSize = document.getElementById('watchedGridSize');
+    const searchInput = document.getElementById('watchedSearchInput');
 
     const isMobile = window.innerWidth <= 768;
     const defaultSize = isMobile ? 3 : 6;
@@ -430,10 +440,48 @@ function setupWatchedFilterListeners() {
     gridSize.removeEventListener('input', handleWatchedGridSize);
     gridSize.addEventListener('input', handleWatchedGridSize);
 
+    // Recherche en temps réel
+    searchInput.removeEventListener('input', applyWatchedFilters);
+    searchInput.addEventListener('input', applyWatchedFilters);
+
     document.removeEventListener('click', closeWatchedDropdownOutside);
     document.addEventListener('click', closeWatchedDropdownOutside);
 
     handleWatchedGridSize({ target: gridSize });
+}
+
+function setupWatchlistFilterListeners() {
+    const btn = document.getElementById('watchlistFiltersBtn');
+    const dropdown = document.getElementById('watchlistFilters');
+    const sortBy = document.getElementById('watchlistSortBy');
+    const genreFilter = document.getElementById('watchlistGenreFilter');
+    const gridSize = document.getElementById('watchlistGridSize');
+    const searchInput = document.getElementById('watchlistSearchInput');
+
+    const isMobile = window.innerWidth <= 768;
+    const defaultSize = isMobile ? 3 : 6;
+    gridSize.value = defaultSize;
+
+    btn.removeEventListener('click', toggleWatchlistDropdown);
+    btn.addEventListener('click', toggleWatchlistDropdown);
+
+    sortBy.removeEventListener('change', applyWatchlistFilters);
+    sortBy.addEventListener('change', applyWatchlistFilters);
+    
+    genreFilter.removeEventListener('change', applyWatchlistFilters);
+    genreFilter.addEventListener('change', applyWatchlistFilters);
+
+    gridSize.removeEventListener('input', handleWatchlistGridSize);
+    gridSize.addEventListener('input', handleWatchlistGridSize);
+
+    // Recherche en temps réel
+    searchInput.removeEventListener('input', applyWatchlistFilters);
+    searchInput.addEventListener('input', applyWatchlistFilters);
+
+    document.removeEventListener('click', closeWatchlistDropdownOutside);
+    document.addEventListener('click', closeWatchlistDropdownOutside);
+
+    handleWatchlistGridSize({ target: gridSize });
 }
 
 function handleWatchedGridSize(e) {
@@ -487,9 +535,18 @@ function closeWatchedDropdownOutside(e) {
 function applyWatchedFilters() {
     const sortBy = document.getElementById('watchedSortBy').value;
     const genreFilter = document.getElementById('watchedGenreFilter').value;
+    const searchQuery = document.getElementById('watchedSearchInput').value.toLowerCase().trim();
     
     let filtered = [...state.watchedWithDetails];
 
+    // Filtrer par recherche
+    if (searchQuery) {
+        filtered = filtered.filter(movie => 
+            movie.title && movie.title.toLowerCase().includes(searchQuery)
+        );
+    }
+
+    // Filtrer par genre
     if (genreFilter !== 'all') {
         filtered = filtered.filter(movie => 
             movie.genres && movie.genres.some(g => g.id == genreFilter)
@@ -512,16 +569,29 @@ function applyWatchedFilters() {
         }
     });
 
-    if (genreFilter === 'all' && sortBy.includes('title')) {
+    if (genreFilter === 'all' && sortBy.includes('title') && !searchQuery) {
         displayMoviesWithSeparators(filtered, 'watchedGrid', 'title');
     } else {
         displayMovies(filtered, 'watchedGrid');
     }
 }
 
+function resetWatchlistFilters() {
+    document.getElementById('watchlistSortBy').value = 'added-desc';
+    document.getElementById('watchlistGenreFilter').value = 'all';
+    document.getElementById('watchlistSearchInput').value = '';
+    const isMobile = window.innerWidth <= 768;
+    const defaultSize = isMobile ? 3 : 6;
+    document.getElementById('watchlistGridSize').value = defaultSize;
+    handleWatchlistGridSize({ target: document.getElementById('watchlistGridSize') });
+    applyWatchlistFilters();
+}
+
+
 function resetWatchedFilters() {
     document.getElementById('watchedSortBy').value = 'added-desc';
     document.getElementById('watchedGenreFilter').value = 'all';
+    document.getElementById('watchedSearchInput').value = '';  // ← AJOUTER CETTE LIGNE
     const isMobile = window.innerWidth <= 768;
     const defaultSize = isMobile ? 3 : 6;
     document.getElementById('watchedGridSize').value = defaultSize;
@@ -605,4 +675,100 @@ function setupInfiniteScroll() {
     });
 
     if (trigger) observer.observe(trigger);
+}
+
+function toggleSearch() {
+    const widget = document.getElementById('searchWidget');
+    const input = document.getElementById('floatingSearchInput');
+    
+    widget.classList.toggle('active');
+    
+    if (widget.classList.contains('active')) {
+        input.focus();
+        
+        // Event listener pour la recherche en temps réel
+        input.removeEventListener('input', handleFloatingSearch);
+        input.addEventListener('input', handleFloatingSearch);
+    } else {
+        input.value = '';
+        if (state.currentView === 'watchlist') {
+            document.getElementById('watchlistSearchInput').value = '';
+            applyWatchlistFilters();
+        } else if (state.currentView === 'watched') {
+            document.getElementById('watchedSearchInput').value = '';
+            applyWatchedFilters();
+        }
+    }
+}
+
+function handleFloatingSearch() {
+    const input = document.getElementById('floatingSearchInput');
+    const query = input.value;
+    
+    if (state.currentView === 'watchlist') {
+        document.getElementById('watchlistSearchInput').value = query;
+        applyWatchlistFilters();
+    } else if (state.currentView === 'watched') {
+        document.getElementById('watchedSearchInput').value = query;
+        applyWatchedFilters();
+    }
+}
+
+// ==================== LOGIQUE DE RECHERCHE ====================
+
+// 1. Déclencher la recherche quand on appuie sur "Entrée"
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                state.isSearchMode = true;
+                state.currentPage = 1;
+                state.movies = []; // On vide la liste actuelle
+                state.currentSearchQuery = searchInput.value;
+                searchMovies(); // On lance la recherche
+                
+                // Optionnel : fermer le clavier sur mobile
+                searchInput.blur();
+            }
+        });
+    }
+});
+
+// 2. La fonction qui appelle l'API de recherche
+async function searchMovies(isScrollLoad = false) {
+    const grid = document.getElementById('moviesGrid');
+    const loader = document.querySelector('#infiniteScrollTrigger .loader');
+    const query = state.currentSearchQuery;
+
+    if (!query) return loadPopularMovies(); // Si vide, on remet les populaires
+
+    if (state.isLoading) return;
+    state.isLoading = true;
+    if (loader) loader.style.display = 'inline-block';
+
+    try {
+        const response = await fetch(
+            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}&page=${state.currentPage}`
+        );
+        
+        const data = await response.json();
+        const newMovies = data.results;
+
+        if (state.currentPage === 1) {
+            state.movies = newMovies; // Remplacement total si page 1
+            grid.innerHTML = ''; // On vide la grille visuellement
+        } else {
+            state.movies = [...state.movies, ...newMovies]; // Ajout à la suite si scroll
+        }
+
+        displayMovies(newMovies, 'moviesGrid', isScrollLoad);
+        state.currentPage++;
+        
+    } catch (error) {
+        console.error('Erreur recherche:', error);
+    } finally {
+        state.isLoading = false;
+        if (loader) loader.style.display = 'none';
+    }
 }
