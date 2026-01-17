@@ -31,11 +31,9 @@
     <link rel="stylesheet" href="css/modal-movie.css">
 
     <!-- JavaScript - ORDRE IMPORTANT -->    
-     <script src="js/install-guard.js"></script> <!-- ⭐ NOUVEAU -->
+     <script src="js/install-guard.js"></script>
     <script src="js/config.js"></script>
-
-    <script src="js/forgot-password.js"></script> <!-- ⭐ NOUVEAU -->
-    
+    <script src="js/forgot-password.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/swiper.js"></script>
@@ -43,6 +41,7 @@
     <script src="js/profile.js"></script>
     <script src="js/main.js"></script>
     <script src="js/modal-movie.js"></script>
+    <script src="js/language.js"></script>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -76,7 +75,15 @@
             <div class="container">
                 <h1>Découvre et note tes films préférés</h1>
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Rechercher un film...">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Rechercher un film..." 
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                    >
                     <button class="btn" id="searchBtn">Rechercher</button>
                 </div>
             </div>

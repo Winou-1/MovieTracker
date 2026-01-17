@@ -7,12 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         openAuthModal(!isLoginMode);
     });
-    
-    //  Utiliser un bouton submit au lieu d'un form
-    const authSubmitBtn = document.getElementById('authSubmitBtn');
-    if (authSubmitBtn) {
-    }
-    
 
     // Navigation Desktop
     document.getElementById('navFilms').addEventListener('click', (e) => {
@@ -43,15 +37,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Navigation Mobile
     setupMobileNavigation();
 
-    document.getElementById('searchBtn').addEventListener('click', (e) => {
+    // ✅ NOUVELLE GESTION DE LA RECHERCHE EN TEMPS RÉEL
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    let searchTimeout;
+    
+    // Recherche en temps réel à chaque frappe
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        
+        // Attendre 500ms après la dernière frappe avant de rechercher
+        searchTimeout = setTimeout(() => {
+            searchMovies(false);
+        }, 500);
+    });
+    
+    // Bouton de recherche (optionnel, car la recherche se fait déjà automatiquement)
+    searchBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        clearTimeout(searchTimeout);
         searchMovies(false);
     });
     
-    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    // Recherche également avec la touche Entrée
+    searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            searchMovies(false); 
+            clearTimeout(searchTimeout);
+            searchMovies(false);
         }
     });
 

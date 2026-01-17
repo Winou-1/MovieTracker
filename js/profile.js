@@ -404,7 +404,7 @@ function createSettingsModal() {
                         </div>
                     </div>
 
-                    <div class="settings-option">
+                     <div class="settings-option" id="setting-language">
                         <div class="settings-option-header">
                             <div class="settings-option-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -414,7 +414,7 @@ function createSettingsModal() {
                             </div>
                             <div class="settings-option-info">
                                 <div class="settings-option-label">Langue</div>
-                                <div class="settings-option-value">Français</div>
+                                <div class="settings-option-value" id="currentLanguageDisplay"></div>
                             </div>
                             <svg class="settings-option-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="9 18 15 12 9 6"/>
@@ -463,6 +463,23 @@ function setupSettingsEvents() {
     document.getElementById('setting-username')?.addEventListener('click', () => editUsername());
     document.getElementById('setting-email')?.addEventListener('click', () => editEmail());
     document.getElementById('setting-password')?.addEventListener('click', () => editPassword());
+    document.getElementById('setting-language')?.addEventListener('click', () => openLanguageModal());
+
+    updateCurrentLanguageDisplay();
+}
+
+function updateCurrentLanguageDisplay() {
+    const languageNames = {
+        fr: 'Français',
+        en: 'English',
+        es: 'Español'
+    };
+    
+    const currentLang = localStorage.getItem('app_language') || 'fr';
+    const display = document.getElementById('currentLanguageDisplay');
+    if (display) {
+        display.textContent = languageNames[currentLang] || 'Français';
+    }
 }
 
 function openSettings() {
