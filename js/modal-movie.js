@@ -101,25 +101,29 @@ async function loadMovieDetails(movieId) {
     }
 }
 
-function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked = false) {    const modalContent = document.querySelector('#movieModal .modal-content');
+async function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked = false) {
+    const modalContent = document.querySelector('#movieModal .modal-content');
     const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
     const isWatched = state.watched.some(w => w.movie_id == movie.id);
     const currentRating = getUserRating(movie.id);
     const poster = movie.poster_path ? `${CONFIG.TMDB_IMG_URL}${movie.poster_path}` : '';
     const backdrop = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : poster;
-    // Cast (8 premiers acteurs)
     const cast = credits.cast?.slice(0, 8) || [];
+    
+    // Charger les amis qui ont vu ce film
+    let friendsSection = '';
+    if (getToken()) {
+        friendsSection = await showFriendsWhoWatched(movie.id);
+    }
     
     modalContent.innerHTML = `
         <div class="movie-modal-new">
-            <!-- Back Button -->
             <button class="modal-back-btn" onclick="closeMovieModal()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
             </button>
             
-            <!-- Heart Button -->
             <button class="modal-heart-btn ${isLiked ? 'active' : ''}" 
                     onclick="toggleLike(this)">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
@@ -127,7 +131,6 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                 </svg>
             </button>
             
-            <!-- Header Image -->
             <div class="movie-modal-header" style="background-image: url('${backdrop}')">
                 <div class="movie-modal-gradient"></div>
                 <div class="movie-modal-poster">
@@ -135,9 +138,7 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                 </div>
             </div>
             
-            <!-- Content -->
             <div class="movie-modal-content">
-                <!-- Title & Info -->
                 <div class="movie-modal-title-section">
                     <h1 class="movie-modal-title">${movie.title}</h1>
                     <div class="movie-modal-meta">
@@ -146,13 +147,13 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                         <span class="meta-item">⭐ ${movie.vote_average.toFixed(1)}/10</span>
                     </div>
                     
-                    <!-- Genres -->
                     <div class="movie-modal-genres">
                         ${movie.genres?.map(g => `<span class="genre-pill">${g.name}</span>`).join('') || ''}
                     </div>
+                    
+                    ${friendsSection}
                 </div>
                 
-                <!-- Rating Section -->
                 ${getToken() ? `
                     <div class="movie-modal-rating-section">
                         <div class="rating-header">
@@ -171,7 +172,6 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                     </div>
                 ` : ''}
                 
-                <!-- Action Buttons -->
                 ${getToken() ? `
                     <div class="movie-modal-actions">
                         <button class="action-btn btn-trailer" onclick="showTrailer(${movie.id})">
@@ -199,13 +199,11 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                     </div>
                 ` : '<p class="login-prompt">Connectez-vous pour gérer ce film</p>'}
                 
-                <!-- Synopsis -->
                 <div class="movie-modal-section">
                     <h3 class="section-title">Synopsis</h3>
                     <p class="movie-synopsis">${movie.overview || 'Pas de synopsis disponible.'}</p>
                 </div>
                 
-                <!-- Cast -->
                 ${cast.length > 0 ? `
                     <div class="movie-modal-section">
                         <h3 class="section-title">Casting</h3>
@@ -225,7 +223,6 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
                     </div>
                 ` : ''}
                 
-                <!-- Similar/Collection Movies -->
                 ${suggestedMovies.length > 0 ? `
                     <div class="movie-modal-section">
                         <h3 class="section-title">${isCollection ? 'Autres films de la saga' : 'Vous aimerez aussi'}</h3>
@@ -243,7 +240,6 @@ function renderMovieModal(movie, credits, suggestedMovies, isCollection, isLiked
         </div>
     `;
     
-    // Setup rating stars
     if (getToken()) {
         setupModalRatingStars(movie.id, currentRating);
     }

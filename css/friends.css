@@ -1,0 +1,254 @@
+/* ==================== FRIENDS SYSTEM ==================== */
+
+.friends-section {
+    padding: 20px 0;
+}
+
+.friends-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid rgba(68, 85, 102, 0.2);
+}
+
+.friends-tab {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.friends-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.friends-tab .badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.friends-search {
+    margin-bottom: 24px;
+}
+
+.friends-search-input {
+    width: 100%;
+    padding: 14px 18px 14px 45px;
+    border: 2px solid rgba(68, 85, 102, 0.3);
+    border-radius: 12px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.friends-search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.friend-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid rgba(68, 85, 102, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.friend-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.friend-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+    flex-shrink: 0;
+}
+
+.friend-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.friend-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.friend-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.friend-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.friend-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.friend-btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.friend-btn-secondary {
+    background: rgba(68, 85, 102, 0.2);
+    color: var(--text-secondary);
+}
+
+.friend-btn:hover {
+    transform: scale(1.05);
+}
+
+/* Friends who watched movie */
+.movie-friends-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 12px;
+    margin-top: 16px;
+}
+
+.movie-friends-avatars {
+    display: flex;
+    margin-left: -8px;
+}
+
+.movie-friend-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    margin-left: -8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.movie-friend-avatar:hover {
+    transform: scale(1.2);
+    z-index: 10;
+}
+
+.movie-friends-text {
+    font-size: 14px;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Privacy settings */
+.privacy-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.privacy-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.privacy-option.active {
+    border-color: var(--primary);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.privacy-option-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.privacy-option-info {
+    flex: 1;
+}
+
+.privacy-option-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.privacy-option-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .friend-card {
+        padding: 12px;
+    }
+    
+    .friend-avatar {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .friend-name {
+        font-size: 15px;
+    }
+    
+    .friend-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}

@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="css/filters.css">
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/modal-movie.css">
+    <link rel="stylesheet" href="css/friends.css">
 
     <!-- JavaScript - ORDRE IMPORTANT -->    
      <script src="js/install-guard.js"></script>
@@ -42,6 +43,7 @@
     <script src="js/main.js"></script>
     <script src="js/modal-movie.js"></script>
     <script src="js/language.js"></script>
+    <script src="js/friends.js"></script>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -58,6 +60,7 @@
                 <li><a href="#" id="navWatchlist">Watchlist</a></li>
                 <li><a href="#" id="navWatched">Films vus</a></li>
                 <li><a href="#" id="navProfile">Profil</a></li>
+                <li><a href="#" id="navFriends">Amis</a></li>
             </ul>
             <div id="authButtons">
                 <button class="btn-secondary" id="loginBtn">Connexion</button>
@@ -249,6 +252,8 @@
                         <div class="profile-info">
                             <h2 id="profileUsername">Utilisateur</h2>
                             <p class="profile-email" id="profileEmail">email@example.com</p>
+                            <h2 id="usernameDisplay">Pseudo</h2>
+                            <p id="friendCodeDisplay" style="color:var(--text-muted); font-family:monospace; font-size:1.2em; letter-spacing:2px; margin-top:5px;">#000000</p>
                             <div class="profile-actions">
                                 <button class="btn-secondary btn-small" onclick="editUsername()">✏️ Modifier le pseudo</button>
                                 <button class="btn-secondary btn-small" onclick="logout()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none;">🚪 Déconnexion</button>
@@ -285,6 +290,9 @@
             </div>
         </section>
     </main>
+    <section class="friends-section" id="friendsSection" style="display: none;">
+        <div class="container"></div>
+    </section>
 
     <!-- Navigation Mobile -->
     <nav class="mobile-nav">
@@ -307,6 +315,10 @@
         <a class="mobile-nav-item" id="mobileNavProfile">
             <div class="mobile-nav-icon">👤</div>
             <div class="mobile-nav-label">Profil</div>
+        </a>
+        <a class="mobile-nav-item" id="mobileNavFriends">
+            <div class="mobile-nav-icon">👥</div>
+            <div class="mobile-nav-label">Amis</div>
         </a>
     </nav>
 

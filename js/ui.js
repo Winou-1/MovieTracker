@@ -8,6 +8,16 @@ function updateUI() {
         updateHeaderAvatar();
         
         setupMobileProfileClick();
+        // Dans updateUI() ou loadUserData()
+        if (state.user) {
+            document.getElementById('usernameDisplay').textContent = state.user.username;
+            
+            // Affichage du code ami
+            const codeDisplay = document.getElementById('friendCodeDisplay');
+            if (codeDisplay && state.user.friend_code) {
+                codeDisplay.textContent = '#' + state.user.friend_code;
+            }
+        }
     }
 }
 
@@ -138,7 +148,12 @@ function switchView(view) {
             document.getElementById('mobileNavSwiper')?.classList.add('active');
             loadSwiperMovies();
             break;
-    }
+        case 'friends':
+            document.getElementById('friendsSection').style.display = 'block';
+            document.getElementById('mobileNavFriends')?.classList.add('active');
+            initFriendsSection();
+            break;
+            }
 }
 
 function updateMobileNav(activeId) {

@@ -69,10 +69,13 @@ export const handler = async (event) => {
 
       const hashedPassword = await bcrypt.hash(password, 10);
       
+      const friendCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // UNE SEULE insertion avec toutes les infos d'un coup
       const newUser = await sql`
-        INSERT INTO users (username, email, password)
-        VALUES (${username}, ${email}, ${hashedPassword})
-        RETURNING id, username, email, avatar, created_at
+        INSERT INTO users (username, email, password, friend_code)
+        VALUES (${username}, ${email}, ${hashedPassword}, ${friendCode})
+        RETURNING id, username, email, avatar, friend_code, created_at
       `;
 
       const token = jwt.sign(
@@ -347,7 +350,7 @@ export const handler = async (event) => {
     // GET /profile
     if (path === '/profile' && method === 'GET') {
       const userData = await sql`
-        SELECT id, username, email, avatar, created_at 
+        SELECT id, username, email, avatar, friend_code, created_at 
         FROM users 
         WHERE id = ${user.userId}
       `;
@@ -704,6 +707,343 @@ export const handler = async (event) => {
         statusCode: 200,
         headers,
         body: JSON.stringify({ message: 'Like retiré' })
+      };
+    }
+
+    // ==================== FRIENDS ====================
+
+    // GET /friends - Liste des amis acceptés
+    if (path === '/friends' && method === 'GET') {
+      const friends = await sql`
+        SELECT 
+          u.id, 
+          u.username, 
+          u.avatar, 
+          u.profile_privacy,
+          f.created_at as friend_since
+        FROM friendships f
+        JOIN users u ON (
+          CASE 
+            WHEN f.user_id = ${user.userId} THEN u.id = f.friend_id
+            ELSE u.id = f.user_id
+          END
+        )
+        WHERE (f.user_id = ${user.userId} OR f.friend_id = ${user.userId})
+        AND f.status = 'accepted'
+        ORDER BY u.username ASC
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(friends)
+      };
+    }
+
+    // GET /friends/requests - Demandes d'amis en attente
+    if (path === '/friends/requests' && method === 'GET') {
+      const requests = await sql`
+        SELECT 
+          u.id, 
+          u.username, 
+          u.avatar,
+          f.created_at as requested_at
+        FROM friendships f
+        JOIN users u ON u.id = f.user_id
+        WHERE f.friend_id = ${user.userId}
+        AND f.status = 'pending'
+        ORDER BY f.created_at DESC
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(requests)
+      };
+    }
+
+    // POST /friends/request - Envoyer une demande d'ami
+    if (path === '/friends/request' && method === 'POST') {
+      const { friend_id } = JSON.parse(event.body);
+      
+      // Vérifier que l'utilisateur existe
+      const targetUser = await sql`SELECT id FROM users WHERE id = ${friend_id}`;
+      if (targetUser.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Utilisateur introuvable' })
+        };
+      }
+      
+      // Vérifier qu'il n'y a pas déjà une relation
+      const existing = await sql`
+        SELECT id FROM friendships 
+        WHERE (user_id = ${user.userId} AND friend_id = ${friend_id})
+        OR (user_id = ${friend_id} AND friend_id = ${user.userId})
+      `;
+      
+      if (existing.length > 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Demande déjà existante' })
+        };
+      }
+      
+      await sql`
+        INSERT INTO friendships (user_id, friend_id, status)
+        VALUES (${user.userId}, ${friend_id}, 'pending')
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Demande envoyée' })
+      };
+    }
+
+    // PUT /friends/accept/:id - Accepter une demande
+    if (path.startsWith('/friends/accept/') && method === 'PUT') {
+      const friendId = parseInt(path.split('/')[3]);
+      
+      await sql`
+        UPDATE friendships 
+        SET status = 'accepted', updated_at = NOW()
+        WHERE user_id = ${friendId} 
+        AND friend_id = ${user.userId}
+        AND status = 'pending'
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Ami ajouté' })
+      };
+    }
+
+    // DELETE /friends/:id - Supprimer un ami ou refuser une demande
+    if (path.startsWith('/friends/') && method === 'DELETE') {
+      const friendId = parseInt(path.split('/')[2]);
+      
+      await sql`
+        DELETE FROM friendships 
+        WHERE (user_id = ${user.userId} AND friend_id = ${friendId})
+        OR (user_id = ${friendId} AND friend_id = ${user.userId})
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Ami supprimé' })
+      };
+    }
+
+    // GET /friends/search?q=123456 - Rechercher par CODE AMI
+    if (path.startsWith('/friends/search') && method === 'GET') {
+      const query = new URL(event.rawUrl).searchParams.get('q');
+      
+      // On attend exactement 6 chiffres
+      if (!query || query.length !== 6) {
+        return {
+          statusCode: 200, // On renvoie une liste vide pas une erreur (plus propre pour l'UI)
+          headers,
+          body: JSON.stringify([])
+        };
+      }
+      
+      // Recherche EXACTE sur le friend_code
+      const users = await sql`
+        SELECT 
+            id, 
+            username, 
+            avatar, 
+            friend_code,
+            EXISTS(
+                SELECT 1 FROM friendships 
+                WHERE (user_id = ${user.userId} AND friend_id = users.id)
+                   OR (friend_id = ${user.userId} AND user_id = users.id)
+            ) as is_friend,
+            EXISTS(
+                SELECT 1 FROM friendships 
+                WHERE user_id = ${user.userId} AND friend_id = users.id AND status = 'pending'
+            ) as has_requested,
+            EXISTS(
+                SELECT 1 FROM friendships 
+                WHERE user_id = users.id AND friend_id = ${user.userId} AND status = 'pending'
+            ) as has_received
+        FROM users 
+        WHERE friend_code = ${query}
+        AND id != ${user.userId}
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(users)
+      };
+    }
+
+    // GET /profile/:userId - Voir le profil d'un autre utilisateur
+  if (path.startsWith('/profile/') && path.split('/').length === 3 && method === 'GET') {
+    const targetUserId = parseInt(path.split('/')[2]);
+    
+    // Récupérer les infos de base
+    const userData = await sql`
+      SELECT id, username, avatar, profile_privacy, created_at 
+      FROM users 
+      WHERE id = ${targetUserId}
+    `;
+    
+    if (userData.length === 0) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'Utilisateur introuvable' })
+      };
+    }
+    
+    const targetUser = userData[0];
+    
+    // Vérifier la relation d'amitié
+    const friendship = await sql`
+      SELECT status FROM friendships 
+      WHERE (user_id = ${user.userId} AND friend_id = ${targetUserId})
+      OR (user_id = ${targetUserId} AND friend_id = ${user.userId})
+    `;
+    
+    const isFriend = friendship.length > 0 && friendship[0].status === 'accepted';
+    const friendshipStatus = friendship.length > 0 ? friendship[0].status : null;
+    
+    // Vérifier les permissions
+    const canView = 
+      targetUser.profile_privacy === 'public' ||
+      (targetUser.profile_privacy === 'friends_only' && isFriend) ||
+      targetUserId === user.userId;
+    
+    if (!canView) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          id: targetUser.id,
+          username: targetUser.username,
+          avatar: targetUser.avatar,
+          profile_privacy: targetUser.profile_privacy,
+          is_private: true,
+          is_friend: isFriend,
+          friendship_status: friendshipStatus
+        })
+      };
+    }
+    
+    // Récupérer les statistiques
+    const stats = await sql`
+      SELECT 
+        (SELECT COUNT(*) FROM watched WHERE user_id = ${targetUserId}) as watched_count,
+        (SELECT COUNT(*) FROM watchlist WHERE user_id = ${targetUserId}) as watchlist_count,
+        (SELECT COUNT(*) FROM likes WHERE user_id = ${targetUserId}) as likes_count,
+        (SELECT COALESCE(AVG(rating)::numeric(10,1), 0) FROM watched WHERE user_id = ${targetUserId} AND rating IS NOT NULL) as average_rating
+    `;
+    
+    // ✅ CORRECTION : Récupérer seulement les IDs des films likés
+    const likes = await sql`
+      SELECT movie_id FROM likes 
+      WHERE user_id = ${targetUserId}
+      ORDER BY created_at DESC
+      LIMIT 20
+    `;
+    
+    // Récupérer la watchlist
+    const watchlist = await sql`
+      SELECT movie_id, movie_title, movie_poster 
+      FROM watchlist 
+      WHERE user_id = ${targetUserId}
+      ORDER BY added_at DESC
+      LIMIT 20
+    `;
+    
+    // Récupérer les films vus
+    const watched = await sql`
+      SELECT movie_id, movie_title, movie_poster 
+      FROM watched 
+      WHERE user_id = ${targetUserId}
+      ORDER BY watched_at DESC
+      LIMIT 20
+    `;
+    
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        id: targetUser.id,
+        username: targetUser.username,
+        avatar: targetUser.avatar,
+        profile_privacy: targetUser.profile_privacy,
+        created_at: targetUser.created_at,
+        is_friend: isFriend,
+        friendship_status: friendshipStatus,
+        stats: stats[0],
+        likes: likes.map(l => l.movie_id), // ✅ Renvoyer juste les IDs
+        watchlist: watchlist,
+        watched: watched
+      })
+    };
+  }
+
+    // PUT /profile/privacy - Changer la confidentialité du profil
+    if (path === '/profile/privacy' && method === 'PUT') {
+      const { privacy } = JSON.parse(event.body);
+      
+      if (!['public', 'private', 'friends_only'].includes(privacy)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Valeur invalide' })
+        };
+      }
+      
+      await sql`
+        UPDATE users 
+        SET profile_privacy = ${privacy}
+        WHERE id = ${user.userId}
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'Confidentialité mise à jour' })
+      };
+    }
+
+    // GET /movies/:movieId/friends - Voir quels amis ont vu ce film
+    if (path.match(/^\/movies\/\d+\/friends$/) && method === 'GET') {
+      const movieId = parseInt(path.split('/')[2]);
+      
+      const friendsWhoWatched = await sql`
+        SELECT DISTINCT
+          u.id,
+          u.username,
+          u.avatar,
+          w.watched_at,
+          r.rating,
+          EXISTS(SELECT 1 FROM likes WHERE user_id = u.id AND movie_id = ${movieId}) as has_liked
+        FROM users u
+        JOIN friendships f ON (
+          (f.user_id = ${user.userId} AND f.friend_id = u.id)
+          OR (f.friend_id = ${user.userId} AND f.user_id = u.id)
+        )
+        LEFT JOIN watched w ON w.user_id = u.id AND w.movie_id = ${movieId}
+        LEFT JOIN ratings r ON r.user_id = u.id AND r.movie_id = ${movieId}
+        WHERE f.status = 'accepted'
+        AND (w.movie_id IS NOT NULL OR EXISTS(SELECT 1 FROM likes WHERE user_id = u.id AND movie_id = ${movieId}))
+        ORDER BY w.watched_at DESC NULLS LAST
+      `;
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(friendsWhoWatched)
       };
     }
 

@@ -381,7 +381,27 @@ function createSettingsModal() {
                         </div>
                     </div>
                 </div>
-
+                <div class="settings-option" id="setting-privacy">
+                    <div class="settings-option-header">
+                        <div class="settings-option-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                        </div>
+                        <div class="settings-option-info">
+                            <div class="settings-option-label">Confidentialité</div>
+                            <div class="settings-option-value">${
+                                profileData.user?.profile_privacy === 'public' ? 'Public' :
+                                profileData.user?.profile_privacy === 'private' ? 'Privé' :
+                                'Amis uniquement'
+                            }</div>
+                        </div>
+                        <svg class="settings-option-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
                 <div class="settings-section">
                     <div class="settings-section-title">Préférences</div>
                     
@@ -464,7 +484,7 @@ function setupSettingsEvents() {
     document.getElementById('setting-email')?.addEventListener('click', () => editEmail());
     document.getElementById('setting-password')?.addEventListener('click', () => editPassword());
     document.getElementById('setting-language')?.addEventListener('click', () => openLanguageModal());
-
+    document.getElementById('setting-privacy')?.addEventListener('click', () => openPrivacySettings());
     updateCurrentLanguageDisplay();
 }
 

@@ -85,6 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Navigation Desktop - ajoute après navProfile
+    document.getElementById('navFriends').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!getToken()) openAuthModal(true);
+        else switchView('friends');
+    });
+
     if (window.history.state === null) {
         window.history.pushState({ view: 'movies' }, '', '');
     }
@@ -118,20 +125,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupMobileNavigation() {
-    const mobileNavItems = ['Films', 'Swiper', 'Watchlist', 'Watched', 'Profile'];
-    
+    const mobileNavItems = ['Films', 'Swiper', 'Watchlist', 'Watched', 'Profile', 'Friends'];
+
     mobileNavItems.forEach(item => {
-        document.getElementById(`mobileNav${item}`).addEventListener('click', (e) => {
+        const el = document.getElementById(`mobileNav${item}`);
+        if (!el) return;
+
+        el.addEventListener('click', (e) => {
             e.preventDefault();
             const view = item.toLowerCase();
-            
-            if (['swiper', 'watchlist', 'watched', 'profile'].includes(view) && !getToken()) {
+
+            if (['swiper', 'watchlist', 'watched', 'profile', 'friends'].includes(view) && !getToken()) {
                 openAuthModal(true);
             } else {
                 updateMobileNav(`mobileNav${item}`);
                 switchView(view === 'films' ? 'movies' : view);
-                window.history.pushState({ view: view === 'films' ? 'movies' : view }, '', '');
+
+                if (view === 'friends') {
+                    initFriendsSection();
+                }
             }
         });
     });
 }
+
+
+
