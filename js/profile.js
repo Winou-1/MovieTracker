@@ -17,7 +17,8 @@ let profileData = {
 // Initialiser le profil
 async function initProfile() {
     if (!getToken()) {
-        window.location.href = '/login.html';
+        switchView('movies');
+        openAuthModal(true);
         return;
     }
 
@@ -203,7 +204,7 @@ function renderProfile() {
             <div class="stat-card">
                 <div class="stat-card-header">
                     <span class="stat-card-icon">⭐</span>
-                    <span class="stat-card-value">${stats.average_rating}/10</span>
+                    <span class="stat-card-value">${stats.average_rating}</span>
                 </div>
                 <div class="stat-card-label">Note moy.</div>
                 <div class="stat-card-sublabel">${stats.rated_count} notes</div>
@@ -421,7 +422,7 @@ function createSettingsModal() {
                         </div>
                     </div>
 
-                    <div class="settings-option settings-toggle">
+                    <!--<div class="settings-option settings-toggle">
                         <div class="settings-option-header">
                             <div class="settings-option-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -437,7 +438,7 @@ function createSettingsModal() {
                              onclick="toggleSetting('autoplay', this)">
                             <div class="toggle-slider"></div>
                         </div>
-                    </div>
+                    </div>-->
                 </div>
 
                 <div class="settings-section settings-danger-zone">
@@ -688,20 +689,132 @@ async function saveCroppedAvatar() {
     }
 }
 
+// 1. Fonction pour OUVRIR la modale (Style identique à editUsername)
 function editEmail() {
-    showToast('Fonctionnalité à venir', 'info');
+    const currentEmail = profileData.user.email || '';
+    
+    // Création dynamique de la modale
+    const modal = document.createElement('div');
+    modal.className = 'settings-modal active';
+    modal.id = 'emailEditModal';
+    modal.innerHTML = `
+        <div class="settings-content" style="max-width: 400px; margin: auto; border-radius: 24px;">
+            <div class="settings-handle"></div>
+            <div class="settings-header">
+                <div class="settings-header-top">
+                    <h2 class="settings-title">Modifier l'email</h2>
+                    <button class="settings-close-btn" onclick="closeEmailModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-body">
+                <div class="settings-input-group">
+                    <input 
+                        type="email" 
+                        id="newEmailInput" 
+                        class="settings-input" 
+                        value="${currentEmail}"
+                        placeholder="Nouvelle adresse email"
+                    >
+                </div>
+                <button class="settings-btn-save" onclick="saveNewEmail()">
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    
+    // Focus automatique sur le champ
+    setTimeout(() => {
+        const input = document.getElementById('newEmailInput');
+        if(input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+    
+    // Support de la touche "Entrée"
+    document.getElementById('newEmailInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveNewEmail();
+        }
+    });
+}
+
+// 2. Fonction pour SAUVEGARDER (Contient ta logique de validation et API)
+async function saveNewEmail() {
+    const input = document.getElementById('newEmailInput');
+    const newEmail = input.value.trim();
+    const currentEmail = profileData.user.email;
+
+    // Vérification basique
+    if (!newEmail || newEmail === currentEmail) {
+        closeEmailModal();
+        return;
+    }
+
+    // Ta validation Regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+        showToast('Format d\'email invalide', 'error');
+        input.focus(); // On redonne le focus en cas d'erreur
+        return;
+    }
+
+    // Appel API
+    try {
+        const response = await apiRequest('/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ email: newEmail })
+        });
+
+        if (response && !response.error) {
+            profileData.user.email = newEmail;
+            
+            // Mise à jour de l'affichage
+            const emailDisplay = document.querySelector('.profile-email');
+            if (emailDisplay) emailDisplay.textContent = newEmail;
+            
+            showToast('Email mis à jour avec succès !', 'success');
+            loadUserProfile(); // Rechargement complet
+            closeEmailModal();
+        } else {
+            showToast(response?.error || 'Erreur lors du changement d\'email', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur changement email:', error);
+        showToast(error.message || 'Erreur lors du changement d\'email', 'error');
+    }
+}
+
+// 3. Fonction pour FERMER la modale
+function closeEmailModal() {
+    const modal = document.getElementById('emailEditModal');
+    if (modal) {
+        modal.remove(); // Supprime l'élément du DOM
+        document.body.style.overflow = ''; // Réactive le scroll
+    }
 }
 
 function editPassword() {
     // La fonction est maintenant dans forgot-password.js
-    if (typeof window.editPassword === 'function') {
-        window.editPassword();
+    if (typeof window.openForgotPasswordModalprofile() === 'function') {
+        window.openForgotPasswordModalprofile();
     }
 }
 
 function confirmLogout() {
     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        closeSettings()
         logout();
+        switchView('movies');
     }
 }
 

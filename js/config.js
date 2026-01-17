@@ -1,6 +1,6 @@
 const CONFIG = {
-    API_URL: 'http://localhost:3000/api',
-    //API_URL: '/.netlify/functions/api',
+    API_URL: '/.netlify/functions/api',
+    //API_URL: 'http://localhost:3000/api',
     TMDB_API_KEY: 'f05382a7b84dc7c40d1965fb01e19f2b',
     TMDB_BASE_URL: 'https://api.themoviedb.org/3',
     TMDB_IMG_URL: 'https://image.tmdb.org/t/p/w500'
@@ -43,6 +43,15 @@ function clearToken() {
     state.user = null;
 }
 
+// Routes publiques qui ne nécessitent pas d'authentification
+const PUBLIC_ROUTES = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/health'
+];
+
 async function apiRequest(endpoint, options = {}) {
     const token = getToken();
     const headers = {
@@ -60,7 +69,11 @@ async function apiRequest(endpoint, options = {}) {
             headers
         });
 
-        if (response.status === 401 || response.status === 403) {
+        // Vérifier si c'est une route publique
+        const isPublicRoute = PUBLIC_ROUTES.some(route => endpoint.startsWith(route));
+
+        // Si 401/403 ET ce n'est PAS une route publique = session expirée
+        if ((response.status === 401 || response.status === 403) && !isPublicRoute) {
             clearToken();
             updateUI();
             showToast('Session expirée, veuillez vous reconnecter', 'error');

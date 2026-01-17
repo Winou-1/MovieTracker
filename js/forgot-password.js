@@ -68,20 +68,32 @@ function addForgotPasswordLink() {
 function openForgotPasswordModal() {
     // Fermer le modal d'auth actuel
     document.getElementById('authModal').classList.remove('active');
-    
     // Créer ou afficher le modal de réinitialisation
     let forgotModal = document.getElementById('forgotPasswordModal');
-    
     if (!forgotModal) {
         forgotModal = createForgotPasswordModal();
         document.body.appendChild(forgotModal);
     }
-    
     // Reset le formulaire
     document.getElementById('forgotEmail').value = '';
     document.getElementById('forgotError').style.display = 'none';
     document.getElementById('forgotSuccess').style.display = 'none';
-    
+    forgotModal.classList.add('active');
+}
+
+function openForgotPasswordModalprofile() {
+    // Fermer le modal d'auth actuel
+    document.getElementById('authModal').classList.remove('active');
+    // Créer ou afficher le modal de réinitialisation
+    let forgotModal = document.getElementById('forgotPasswordModal');
+    if (!forgotModal) {
+        forgotModal = createForgotPasswordModal();
+        document.body.appendChild(forgotModal);
+    }
+    // Reset le formulaire
+    document.getElementById('forgotEmail').value = profileData.user.email || '';
+    document.getElementById('forgotError').style.display = 'none';
+    document.getElementById('forgotSuccess').style.display = 'none';
     forgotModal.classList.add('active');
 }
 
@@ -169,17 +181,33 @@ async function sendPasswordResetEmail() {
             successDiv.innerHTML = `
                 <strong>✓ Email envoyé !</strong><br>
                 Si un compte existe avec <strong>${email}</strong>, un lien de réinitialisation a été envoyé.<br>
-                Vérifiez votre boîte de réception (et vos spams).
+                Vérifiez votre boîte de réception (ET VOS SPAMS).
             `;
             successDiv.style.display = 'block';
             
             // Vider le champ email
             document.getElementById('forgotEmail').value = '';
             
-            // EN DEV: Afficher le token (RETIRER EN PROD)
-            if (response.token) {
-                console.log('🔑 Reset Token (DEV):', response.token);
-                successDiv.innerHTML += `<br><br><small style="opacity: 0.7;">Token (DEV): ${response.token}</small>`;
+            // Mode DEV: Afficher le lien directement
+            if (response.devMode && response.resetLink) {
+                console.log('🔗 Lien de reset (DEV):', response.resetLink);
+                
+                const devLink = document.createElement('div');
+                devLink.style.cssText = `
+                    margin-top: 16px;
+                    padding: 12px;
+                    background: rgba(59, 130, 246, 0.1);
+                    border: 1px solid rgba(59, 130, 246, 0.3);
+                    border-radius: 8px;
+                    font-size: 12px;
+                `;
+                devLink.innerHTML = `
+                    <strong style="color: var(--primary);">🔧 Mode DEV</strong><br>
+                    <a href="${response.resetLink}" style="color: var(--primary); word-break: break-all;">
+                        ${response.resetLink}
+                    </a>
+                `;
+                successDiv.appendChild(devLink);
             }
         } else {
             errorDiv.textContent = response?.error || 'Erreur lors de l\'envoi';
