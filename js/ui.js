@@ -150,7 +150,8 @@ function switchView(view) {
             break;
         case 'friends':
             document.getElementById('friendsSection').style.display = 'block';
-            document.getElementById('mobileNavFriends')?.classList.add('active');
+            // On garde l'utilisateur sur le profil dans la navbar
+            document.getElementById('mobileNavProfile')?.classList.add('active');
             initFriendsSection();
             break;
             }

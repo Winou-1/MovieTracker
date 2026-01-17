@@ -153,25 +153,38 @@ function renderProfile() {
     const stats = profileData.stats;
 
     container.innerHTML = `
-        <div class="profile-header">
+    <div class="profile-header">
+        <div class="profile-header-actions">
+            <button class="profile-friends-btn" onclick="switchView('friends')" title="Mes amis">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span class="profile-friends-badge" id="friendsBadgeCount">0</span>
+            </button>
+            
             <button class="profile-settings-btn" onclick="openSettings()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
             </button>
-            <div class="profile-header-content">
-                <div class="profile-avatar-wrapper">
-                    <img src="${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username) + '&background=2563eb&color=fff&size=200'}" 
-                         alt="${user.username}" 
-                         class="profile-avatar">
-                </div>
-                <div class="profile-info">
-                    <h2>${user.username}</h2>
-                    <p class="profile-email">${user.email}</p>
-                </div>
+        </div>
+        
+        <div class="profile-header-content">
+            <div class="profile-avatar-wrapper">
+                <img src="${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username) + '&background=2563eb&color=fff&size=200'}" 
+                     alt="${user.username}" 
+                     class="profile-avatar">
+            </div>
+            <div class="profile-info">
+                <h2>${user.username}</h2>
+                <p class="profile-email">${user.email}</p>
             </div>
         </div>
+    </div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -230,10 +243,23 @@ function renderProfile() {
         ${renderMoviesSection('📖 À voir', profileData.watchlistMovies, 'watchlist')}
         ${renderMoviesSection('👁️ Vus récemment', profileData.watchedMovies, 'watched')}
     `;
-
+    loadFriendsCount();
     createSettingsModal();
 }
 
+async function loadFriendsCount() {
+    try {
+        const friendsData = await apiRequest('/friends');
+        const friendsCount = friendsData ? friendsData.length : 0;
+        const badge = document.getElementById('friendsBadgeCount');
+        if (badge) {
+            badge.textContent = friendsCount;
+            badge.style.display = friendsCount > 0 ? 'flex' : 'none';
+        }
+    } catch (error) {
+        console.error('Erreur chargement nombre d\'amis:', error);
+    }
+}
 // Rendre une section de films
 function renderMoviesSection(title, movies, type) {
     if (!movies || movies.length === 0) {

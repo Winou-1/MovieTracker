@@ -591,14 +591,13 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== RATINGS ====================
+// ==================== RATINGS (Via table watched) ====================
     
     // GET /ratings/:id
     if (path.startsWith('/ratings/') && method === 'GET') {
       const movieId = path.split('/')[2];
-      
       const rating = await sql`
-        SELECT rating FROM ratings 
+        SELECT rating FROM watched 
         WHERE user_id = ${user.userId} AND movie_id = ${movieId}
       `;
       
@@ -608,14 +607,12 @@ export const handler = async (event) => {
         body: JSON.stringify(rating[0] || { rating: null })
       };
     }
-
     // POST /ratings
     if (path === '/ratings' && method === 'POST') {
       const { movie_id, rating } = JSON.parse(event.body);
-      
       await sql`
-        INSERT INTO ratings (user_id, movie_id, rating)
-        VALUES (${user.userId}, ${movie_id}, ${rating})
+        INSERT INTO watched (user_id, movie_id, rating, watched_at)
+        VALUES (${user.userId}, ${movie_id}, ${rating}, NOW())
         ON CONFLICT (user_id, movie_id) 
         DO UPDATE SET rating = ${rating}, updated_at = NOW()
       `;
@@ -630,9 +627,9 @@ export const handler = async (event) => {
     // DELETE /ratings/:id
     if (path.startsWith('/ratings/') && method === 'DELETE') {
       const movieId = path.split('/')[2];
-      
       await sql`
-        DELETE FROM ratings 
+        UPDATE watched 
+        SET rating = NULL 
         WHERE user_id = ${user.userId} AND movie_id = ${movieId}
       `;
       
@@ -642,7 +639,6 @@ export const handler = async (event) => {
         body: JSON.stringify({ message: 'Note supprimée' })
       };
     }
-
     // ==================== LIKES ====================
     
     // GET /likes/:id
@@ -1026,7 +1022,7 @@ export const handler = async (event) => {
           u.username,
           u.avatar,
           w.watched_at,
-          r.rating,
+          w.rating,  -- CHANGEMENT ICI : On prend la note dans 'watched' (alias w)
           EXISTS(SELECT 1 FROM likes WHERE user_id = u.id AND movie_id = ${movieId}) as has_liked
         FROM users u
         JOIN friendships f ON (
@@ -1034,7 +1030,7 @@ export const handler = async (event) => {
           OR (f.friend_id = ${user.userId} AND f.user_id = u.id)
         )
         LEFT JOIN watched w ON w.user_id = u.id AND w.movie_id = ${movieId}
-        LEFT JOIN ratings r ON r.user_id = u.id AND r.movie_id = ${movieId}
+        -- SUPPRESSION du LEFT JOIN ratings r (cette table n'existe plus)
         WHERE f.status = 'accepted'
         AND (w.movie_id IS NOT NULL OR EXISTS(SELECT 1 FROM likes WHERE user_id = u.id AND movie_id = ${movieId}))
         ORDER BY w.watched_at DESC NULLS LAST

@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupMobileNavigation() {
-    const mobileNavItems = ['Films', 'Swiper', 'Watchlist', 'Watched', 'Profile', 'Friends'];
+    const mobileNavItems = ['Films', 'Swiper', 'Watchlist', 'Watched', 'Profile'];
 
     mobileNavItems.forEach(item => {
         const el = document.getElementById(`mobileNav${item}`);
@@ -135,19 +135,12 @@ function setupMobileNavigation() {
             e.preventDefault();
             const view = item.toLowerCase();
 
-            if (['swiper', 'watchlist', 'watched', 'profile', 'friends'].includes(view) && !getToken()) {
+            if (['swiper', 'watchlist', 'watched', 'profile'].includes(view) && !getToken()) {
                 openAuthModal(true);
             } else {
                 updateMobileNav(`mobileNav${item}`);
                 switchView(view === 'films' ? 'movies' : view);
-
-                if (view === 'friends') {
-                    initFriendsSection();
-                }
             }
         });
     });
 }
-
-
-

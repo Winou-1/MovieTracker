@@ -68,7 +68,6 @@ function logout() {
     switchView('movies');
     showToast('Déconnexion réussie');
 }
-
 async function loadUserData() {
     if (!getToken()) return;
 
