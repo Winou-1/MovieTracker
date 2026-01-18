@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Navigation Mobile
     setupMobileNavigation();
 
-    // ✅ NOUVELLE GESTION DE LA RECHERCHE EN TEMPS RÉEL
+    // ✅ GESTION DE LA RECHERCHE PRINCIPALE
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     
@@ -46,25 +46,62 @@ document.addEventListener('DOMContentLoaded', () => {
     // Recherche en temps réel à chaque frappe
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        
+        // Si le champ est vide, retour aux films populaires
+        if (!query) {
+            state.isSearchMode = false;
+            state.currentSearchQuery = '';
+            state.currentPage = 1;
+            loadPopularMovies(false);
+            return;
+        }
         
         // Attendre 500ms après la dernière frappe avant de rechercher
         searchTimeout = setTimeout(() => {
+            state.isSearchMode = true;
+            state.currentSearchQuery = query;
+            state.searchPage = 1;
             searchMovies(false);
         }, 500);
     });
     
-    // Bouton de recherche (optionnel, car la recherche se fait déjà automatiquement)
+    // Bouton de recherche
     searchBtn.addEventListener('click', (e) => {
         e.preventDefault();
         clearTimeout(searchTimeout);
+        const query = searchInput.value.trim();
+        
+        if (!query) {
+            state.isSearchMode = false;
+            state.currentSearchQuery = '';
+            loadPopularMovies(false);
+            return;
+        }
+        
+        state.isSearchMode = true;
+        state.currentSearchQuery = query;
+        state.searchPage = 1;
         searchMovies(false);
     });
     
-    // Recherche également avec la touche Entrée
+    // Recherche avec la touche Entrée
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                state.isSearchMode = false;
+                state.currentSearchQuery = '';
+                loadPopularMovies(false);
+                return;
+            }
+            
+            state.isSearchMode = true;
+            state.currentSearchQuery = query;
+            state.searchPage = 1;
             searchMovies(false);
         }
     });

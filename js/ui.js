@@ -94,6 +94,9 @@ function setupMobileProfileClick() {
 
 function switchView(view) {
     state.currentView = view;
+    const orphanModals = document.querySelectorAll('#friendProfileModal, #usernameEditModal, #emailEditModal');
+    orphanModals.forEach(modal => modal.remove());
+    document.body.style.overflow = '';
 
     document.getElementById('searchSection').style.display = 'none';
     document.getElementById('moviesSection').style.display = 'none';
@@ -101,6 +104,7 @@ function switchView(view) {
     document.getElementById('watchedSection').style.display = 'none';
     document.getElementById('profileSection').style.display = 'none';
     document.getElementById('swiperSection').style.display = 'none';
+    document.getElementById('friendsSection').style.display = 'none';
 
     // Gérer l'affichage du widget de recherche flottant
     const searchWidget = document.getElementById('searchWidget');

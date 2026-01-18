@@ -48,10 +48,11 @@ async function loadPopularMovies(isScrollLoad = false) {
 
 async function searchMovies(isScrollLoad = false) {
     const searchInput = document.getElementById('searchInput');
-    const query = searchInput ? searchInput.value.trim() : '';
+    const query = state.currentSearchQuery || (searchInput ? searchInput.value.trim() : '');
     const grid = document.getElementById('moviesGrid');
     const loader = document.querySelector('#infiniteScrollTrigger .loader');
 
+    // Si pas de requête, retour aux films populaires
     if (!query) {
         state.searchPage = 1;
         state.isSearchMode = false;
@@ -66,6 +67,7 @@ async function searchMovies(isScrollLoad = false) {
         state.isLoading = true;
         if (loader) loader.style.display = 'inline-block';
 
+        // Premier chargement de recherche
         if (!isScrollLoad) {
             state.searchPage = 1;
             state.movies = [];
@@ -74,17 +76,24 @@ async function searchMovies(isScrollLoad = false) {
         }
 
         const response = await fetch(
-            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(state.currentSearchQuery)}&page=${state.searchPage}`
+            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}&page=${state.searchPage}`
         );
         const data = await response.json();
         
         const newMovies = data.results || [];
-        state.movies = [...state.movies, ...newMovies];
+        
+        if (!isScrollLoad) {
+            state.movies = newMovies;
+            grid.innerHTML = '';
+        } else {
+            state.movies = [...state.movies, ...newMovies];
+        }
+        
         displayMovies(newMovies, 'moviesGrid', isScrollLoad);
         state.searchPage++;
 
     } catch (error) {
-        console.error(error);
+        console.error('Erreur recherche:', error);
         if (!isScrollLoad) {
             grid.innerHTML = '<div class="error">Erreur lors de la recherche</div>';
         }

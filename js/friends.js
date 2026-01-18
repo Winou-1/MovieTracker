@@ -180,7 +180,7 @@ async function viewFriendProfile(userId) {
     modal.className = 'modal active';
     modal.id = 'friendProfileModal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content friend-profile-modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto; border-radius: 12px; position: relative;">
             <button class="close-modal" onclick="closeFriendProfile()">&times;</button>
             <div class="loading">Chargement...</div>
         </div>
@@ -193,19 +193,33 @@ async function viewFriendProfile(userId) {
         if (profile.is_private) {
             modal.querySelector('.modal-content').innerHTML = `
                 <button class="close-modal" onclick="closeFriendProfile()">&times;</button>
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-                    <h2 style="color: var(--text-primary); margin-bottom: 12px;">${profile.username}</h2>
-                    <p style="color: var(--text-secondary);">Ce profil est privé</p>
-                    ${profile.friendship_status === 'pending' ? '<p style="margin-top: 16px; color: var(--primary);">Demande en attente</p>' : ''}
-                    ${!profile.friendship_status ? `<button class="btn" onclick="sendFriendRequest(${profile.id}); closeFriendProfile();" style="margin-top: 20px;">Envoyer une demande</button>` : ''}
+                <div class="friend-profile-private">
+                    <div class="friend-profile-private-icon">🔒</div>
+                    <div class="friend-profile-private-avatar">
+                        <img src="${profile.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username)}" 
+                             alt="${profile.username}">
+                    </div>
+                    <h2>${profile.username}</h2>
+                    <p class="friend-profile-private-text">Ce profil est privé</p>
+                    ${profile.friendship_status === 'pending' ? 
+                        '<div class="friend-profile-badge">Demande en attente</div>' : ''}
+                    ${!profile.friendship_status ? 
+                        `<button class="btn" onclick="sendFriendRequest(${profile.id}); closeFriendProfile();">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="8.5" cy="7" r="4"/>
+                                <line x1="20" y1="8" x2="20" y2="14"/>
+                                <line x1="23" y1="11" x2="17" y2="11"/>
+                            </svg>
+                            Envoyer une demande
+                        </button>` : ''}
                 </div>
             `;
             return;
         }
         
         const watchedMovies = (profile.watched && profile.watched.length > 0) 
-        ? await Promise.all(profile.watched.slice(0, 6).map(async (w) => {
+        ? await Promise.all(profile.watched.slice(0, 8).map(async (w) => {
                 try {
                     const response = await fetch(
                         `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
@@ -218,7 +232,7 @@ async function viewFriendProfile(userId) {
     : [];
         
         const likedMovies = (profile.likes && profile.likes.length > 0)
-    ? await Promise.all(profile.likes.slice(0, 6).map(async (movieId) => {
+    ? await Promise.all(profile.likes.slice(0, 8).map(async (movieId) => {
                 try {
                     const response = await fetch(
                         `${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
@@ -233,54 +247,100 @@ async function viewFriendProfile(userId) {
         modal.querySelector('.modal-content').innerHTML = `
             <button class="close-modal" onclick="closeFriendProfile()">&times;</button>
             
-            <div class="profile-header" style="text-align: center; margin-bottom: 24px;">
-                <img src="${profile.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username)}" 
-                     alt="${profile.username}" 
-                     style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary); margin-bottom: 16px;">
-                <h2 style="color: var(--text-primary); margin-bottom: 8px;">${profile.username}</h2>
-                <p style="color: var(--text-secondary); font-size: 14px;">Ami depuis ${new Date(profile.created_at).toLocaleDateString('fr-FR')}</p>
+            <div class="friend-profile-header">
+                <div class="friend-profile-cover"></div>
+                <div class="friend-profile-avatar-wrapper">
+                    <img src="${profile.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(profile.username)}" 
+                         alt="${profile.username}" 
+                         class="friend-profile-avatar">
+                </div>
+                <div class="friend-profile-info">
+                    <h2 class="friend-profile-username">${profile.username}</h2>
+                    <p class="friend-profile-since">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Ami depuis ${new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                    </p>
+                </div>
             </div>
             
-            <div class="stats-inline" style="margin-bottom: 24px;">
-                <div class="stat-inline-item">
-                    <div class="stat-inline-value">${profile.stats?.watched_count || 0}</div>
-                    <div class="stat-inline-label">Films vus</div>
+            <div class="friend-profile-stats">
+                <div class="friend-profile-stat">
+                    <div class="friend-profile-stat-icon">🎬</div>
+                    <div class="friend-profile-stat-content">
+                        <div class="friend-profile-stat-value">${profile.stats?.watched_count || 0}</div>
+                        <div class="friend-profile-stat-label">Films vus</div>
+                    </div>
                 </div>
-                <div class="stat-inline-item">
-                    <div class="stat-inline-value">${profile.stats?.likes_count || 0}</div>
-                    <div class="stat-inline-label">Coups de cœur</div>
+                <div class="friend-profile-stat">
+                    <div class="friend-profile-stat-icon">❤️</div>
+                    <div class="friend-profile-stat-content">
+                        <div class="friend-profile-stat-value">${profile.stats?.likes_count || 0}</div>
+                        <div class="friend-profile-stat-label">Favoris</div>
+                    </div>
                 </div>
-                <div class="stat-inline-item">
-                    <div class="stat-inline-value">${profile.stats?.watchlist_count || 0}</div>
-                    <div class="stat-inline-label">À voir</div>
+                <div class="friend-profile-stat">
+                    <div class="friend-profile-stat-icon">📌</div>
+                    <div class="friend-profile-stat-content">
+                        <div class="friend-profile-stat-value">${profile.stats?.watchlist_count || 0}</div>
+                        <div class="friend-profile-stat-label">À voir</div>
+                    </div>
                 </div>
-                <div class="stat-inline-item">
-                    <div class="stat-inline-value">${profile.stats?.average_rating || 0}</div>
-                    <div class="stat-inline-label">Note moy.</div>
+                <div class="friend-profile-stat">
+                    <div class="friend-profile-stat-icon">⭐</div>
+                    <div class="friend-profile-stat-content">
+                        <div class="friend-profile-stat-value">${profile.stats?.average_rating || 0}</div>
+                        <div class="friend-profile-stat-label">Note moy.</div>
+                    </div>
                 </div>
             </div>
             
             ${likedMovies.filter(m => m).length > 0 ? `
-                <h3 style="color: var(--text-primary); font-size: 18px; margin-bottom: 16px;">❤️ Coups de cœur</h3>
-                <div class="movies-horizontal-scroll" style="margin-bottom: 24px;">
-                    ${likedMovies.filter(m => m).map(movie => `
-                        <div class="movie-mini-card" onclick="showMovieDetails(${movie.id}); closeFriendProfile();">
-                            <img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}" class="movie-mini-poster">
-                            <div class="movie-mini-title">${movie.title}</div>
-                        </div>
-                    `).join('')}
+                <div class="friend-profile-section">
+                    <h3 class="friend-profile-section-title">
+                        <span class="friend-profile-section-icon">❤️</span>
+                        Coups de cœur
+                    </h3>
+                    <div class="friend-profile-movies">
+                        ${likedMovies.filter(m => m).map(movie => `
+                            <div class="friend-profile-movie" onclick="showMovieDetails(${movie.id}); closeFriendProfile();">
+                                <img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">
+                                <div class="friend-profile-movie-overlay">
+                                    <div class="friend-profile-movie-title">${movie.title}</div>
+                                    <div class="friend-profile-movie-rating">⭐ ${movie.vote_average.toFixed(1)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             ` : ''}
             
             ${watchedMovies.filter(m => m).length > 0 ? `
-                <h3 style="color: var(--text-primary); font-size: 18px; margin-bottom: 16px;">👁️ Films vus récemment</h3>
-                <div class="movies-horizontal-scroll">
-                    ${watchedMovies.filter(m => m).map(movie => `
-                        <div class="movie-mini-card" onclick="showMovieDetails(${movie.id}); closeFriendProfile();">
-                            <img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}" class="movie-mini-poster">
-                            <div class="movie-mini-title">${movie.title}</div>
-                        </div>
-                    `).join('')}
+                <div class="friend-profile-section">
+                    <h3 class="friend-profile-section-title">
+                        <span class="friend-profile-section-icon">👁️</span>
+                        Films vus récemment
+                    </h3>
+                    <div class="friend-profile-movies">
+                        ${watchedMovies.filter(m => m).map(movie => `
+                            <div class="friend-profile-movie" onclick="showMovieDetails(${movie.id}); closeFriendProfile();">
+                                <img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">
+                                <div class="friend-profile-movie-overlay">
+                                    <div class="friend-profile-movie-title">${movie.title}</div>
+                                    <div class="friend-profile-movie-rating">⭐ ${movie.vote_average.toFixed(1)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${likedMovies.filter(m => m).length === 0 && watchedMovies.filter(m => m).length === 0 ? `
+                <div class="friend-profile-empty">
+                    <div class="friend-profile-empty-icon">🎬</div>
+                    <p>Aucune activité récente</p>
                 </div>
             ` : ''}
         `;
@@ -294,7 +354,22 @@ async function viewFriendProfile(userId) {
 
 function closeFriendProfile() {
     const modal = document.getElementById('friendProfileModal');
-    if (modal) modal.remove();
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.remove();
+        }, 300); // Attendre la fin de l'animation
+    }
+    document.body.style.overflow = ''; // Réactiver le scroll
+}
+
+function cleanupModals() {
+    // Supprimer toutes les modals de profil d'ami orphelines
+    const orphanModals = document.querySelectorAll('#friendProfileModal');
+    orphanModals.forEach(modal => {
+        modal.remove();
+    });
+    document.body.style.overflow = '';
 }
 
 // ✅ AMÉLIORATION : Interface de recherche plus claire
