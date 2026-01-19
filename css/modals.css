@@ -216,7 +216,149 @@
 
 
 
-/* Style pour Cropper JS */
+/* ==================== MODAL CROPPER AVATAR - RESPONSIVE ==================== */
+#cropperModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+#cropperModal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#cropperModal .modal-content {
+    max-width: 500px;
+    width: 100%;
+    max-height: calc(100vh - 32px); /* Hauteur maximale = viewport - padding */
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8);
+}
+
+/* Container de l'image avec limite de hauteur */
+#cropperModal .cropper-container-wrapper {
+    width: 100%;
+    max-height: calc(100vh - 120px); /* Viewport - padding - footer */
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#imageToCrop {
+    max-width: 100%;
+    max-height: calc(100vh - 120px);
+    display: block;
+    object-fit: contain;
+}
+
+/* Footer avec boutons */
+#cropperModal .cropper-footer {
+    padding: 12px 16px;
+    background: #1f2327;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #334;
+    flex-shrink: 0;
+}
+
+#cancelCropBtn {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 2px solid #445566;
+    background: transparent;
+    color: #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#cancelCropBtn:hover {
+    background: rgba(68, 85, 102, 0.2);
+    color: white;
+}
+
+#cropAndSaveBtn {
+    padding: 8px 20px;
+    font-size: 14px;
+    background: var(--primary, #3b82f6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#cropAndSaveBtn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+#cropAndSaveBtn:active {
+    transform: translateY(0);
+}
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    #cropperModal {
+        padding: 8px;
+    }
+    
+    #cropperModal .modal-content {
+        max-height: calc(100vh - 16px);
+        border-radius: 16px;
+    }
+    
+    #cropperModal .cropper-container-wrapper {
+        max-height: calc(100vh - 90px);
+    }
+    
+    #imageToCrop {
+        max-height: calc(100vh - 90px);
+    }
+    
+    #cropperModal .cropper-footer {
+        padding: 10px 12px;
+    }
+}
+
+/* Ajustements pour les très petits écrans */
+@media (max-width: 480px) {
+    #cropperModal .cropper-container-wrapper {
+        max-height: calc(100vh - 80px);
+    }
+    
+    #imageToCrop {
+        max-height: calc(100vh - 80px);
+    }
+    
+    #cancelCropBtn,
+    #cropAndSaveBtn {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}
+
+/* Style pour Cropper.js */
 .cropper-view-box,
 .cropper-face {
     border-radius: 50%;
@@ -224,14 +366,19 @@
 }
 
 .cropper-point {
-    background-color: #0c3981; 
+    background-color: #3b82f6;
 }
 
 .cropper-line {
-    background-color: #0c3981;
+    background-color: #3b82f6;
 }
 
 .cropper-modal {
     opacity: 0.8;
     background-color: #000;
+}
+
+/* Assurer que le container Cropper ne dépasse pas */
+.cropper-container {
+    max-height: 100% !important;
 }

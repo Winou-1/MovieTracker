@@ -1,0 +1,235 @@
+/* ==================== SPLASH SCREEN ==================== */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    animation: splashFadeOut 0.5s ease 2s forwards;
+}
+
+.splash-content {
+    text-align: center;
+    animation: splashSlideUp 0.8s ease;
+}
+
+.splash-logo-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 24px;
+}
+
+.splash-logo {
+    font-size: 80px;
+    animation: splashBounce 1s ease infinite;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.3));
+}
+
+.splash-sparkle {
+    position: absolute;
+    font-size: 24px;
+    animation: sparkleFloat 2s ease-in-out infinite;
+}
+
+.sparkle-1 {
+    top: 0;
+    right: 0;
+    animation-delay: 0s;
+}
+
+.sparkle-2 {
+    bottom: 0;
+    left: 0;
+    animation-delay: 0.5s;
+}
+
+.sparkle-3 {
+    top: 50%;
+    right: -20px;
+    animation-delay: 1s;
+}
+
+.splash-title {
+    font-size: 48px;
+    font-weight: 800;
+    color: white;
+    margin: 0 0 32px 0;
+    letter-spacing: -1px;
+    animation: splashTitleGlow 1.5s ease infinite;
+}
+
+.splash-loader {
+    width: 200px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+    overflow: hidden;
+}
+
+.splash-loader-bar {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.5) 0%, 
+        white 50%, 
+        rgba(255, 255, 255, 0.5) 100%);
+    border-radius: 2px;
+    animation: splashProgress 1.5s ease-in-out;
+}
+
+.splash-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* ==================== OFFLINE BANNER ==================== */
+.offline-banner {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 90%;
+    transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.offline-banner.show {
+    top: 80px;
+}
+
+.offline-icon {
+    font-size: 20px;
+    animation: offlinePulse 2s ease infinite;
+}
+
+.offline-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.offline-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.offline-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes splashFadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@keyframes splashSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes splashBounce {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-10px) scale(1.05);
+    }
+}
+
+@keyframes sparkleFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-15px) rotate(180deg);
+        opacity: 0.5;
+    }
+}
+
+@keyframes splashTitleGlow {
+    0%, 100% {
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    }
+    50% {
+        text-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+    }
+}
+
+@keyframes splashProgress {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes offlinePulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+    .splash-logo {
+        font-size: 60px;
+    }
+    
+    .splash-title {
+        font-size: 36px;
+    }
+    
+    .splash-subtitle {
+        font-size: 14px;
+    }
+    
+    .offline-banner {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+    
+    .offline-banner.show {
+        top: 70px;
+    }
+}

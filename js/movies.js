@@ -75,12 +75,24 @@ async function searchMovies(isScrollLoad = false) {
             state.currentSearchQuery = query;
         }
 
+        // ✅ AMÉLIORATION : Recherche multi-langue avec tri par popularité
+        // 1. Recherche dans toutes les langues (sans paramètre language)
+        // 2. include_adult=false pour filtrer le contenu adulte
         const response = await fetch(
-            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}&page=${state.searchPage}`
+            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${state.searchPage}&include_adult=false`
         );
         const data = await response.json();
         
-        const newMovies = data.results || [];
+        let newMovies = data.results || [];
+        
+        // ✅ TRI PAR POPULARITÉ : Les films les plus connus en premier
+        // TMDB retourne déjà un score de pertinence, mais on peut améliorer avec la popularité
+        newMovies.sort((a, b) => {
+            // Critère principal : popularité (vote_count * vote_average)
+            const scoreA = (a.vote_count || 0) * (a.vote_average || 0);
+            const scoreB = (b.vote_count || 0) * (b.vote_average || 0);
+            return scoreB - scoreA;
+        });
         
         if (!isScrollLoad) {
             state.movies = newMovies;
@@ -159,7 +171,6 @@ async function showTrailer(movieId) {
         showToast('Erreur lors du chargement du trailer', 'error');
     }
 }
-
 async function loadWatchlist() {
     if (!getToken()) {
         document.getElementById('watchlistGrid').innerHTML = 
@@ -170,66 +181,111 @@ async function loadWatchlist() {
     const grid = document.getElementById('watchlistGrid');
     grid.innerHTML = '<div class="loading">Chargement...</div>';
     
-    const watchlist = await apiRequest('/watchlist');
-    
-    if (!watchlist || watchlist.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
-        return;
-    }
-
-    state.watchlist = watchlist;
-    
-    const moviesWithDetails = await Promise.all(
-        watchlist.map(async (w) => {
-            try {
-                const response = await fetch(
-                    `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-                );
-                const data = await response.json();
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: data.release_date,
-                    genres: data.genres || []
-                };
-            } catch (e) {
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: null,
-                    genres: []
-                };
+    try {
+        let watchlist;
+        
+        // Essayer de récupérer depuis l'API
+        if (OfflineManager.isOnline) {
+            watchlist = await apiRequest('/watchlist');
+            
+            // Sauvegarder en cache
+            if (watchlist && watchlist.length > 0) {
+                await OfflineCache.save('watchlist', watchlist);
             }
-        })
-    );
-
-    state.watchlistWithDetails = moviesWithDetails;
-    
-    const allGenres = new Set();
-    moviesWithDetails.forEach(movie => {
-        if (movie.genres && movie.genres.length > 0) {
-            movie.genres.forEach(genre => {
-                allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
-            });
+        } else {
+            // Mode offline : récupérer depuis le cache
+            watchlist = await OfflineCache.get('watchlist');
+            console.log('📡 Watchlist chargée depuis le cache');
         }
-    });
-    
-    const genreSelect = document.getElementById('watchlistGenreFilter');
-    genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
-    
-    if (allGenres.size > 0) {
-        Array.from(allGenres)
-            .map(g => JSON.parse(g))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .forEach(genre => {
-                genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
-            });
-    }
+        
+        if (!watchlist || watchlist.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
+            return;
+        }
 
-    applyWatchlistFilters();
-    setupWatchlistFilterListeners();
+        state.watchlist = watchlist;
+        
+        // Récupérer les détails des films
+        const moviesWithDetails = await Promise.all(
+            watchlist.map(async (w) => {
+                try {
+                    let movieData;
+                    
+                    // Essayer de récupérer depuis le cache d'abord
+                    movieData = await OfflineCache.get('movieDetails', w.movie_id);
+                    
+                    // Si pas en cache et en ligne, récupérer depuis TMDB
+                    if (!movieData && OfflineManager.isOnline) {
+                        const response = await fetch(
+                            `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+                        );
+                        movieData = await response.json();
+                        
+                        // Sauvegarder en cache
+                        await OfflineCache.save('movieDetails', movieData);
+                    }
+                    
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title || movieData?.title,
+                        poster_path: w.movie_poster || movieData?.poster_path,
+                        release_date: movieData?.release_date || null,
+                        genres: movieData?.genres || []
+                    };
+                } catch (e) {
+                    // Fallback sur les données minimales
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title,
+                        poster_path: w.movie_poster,
+                        release_date: null,
+                        genres: []
+                    };
+                }
+            })
+        );
+
+        state.watchlistWithDetails = moviesWithDetails;
+        
+        // Générer les filtres de genres
+        const allGenres = new Set();
+        moviesWithDetails.forEach(movie => {
+            if (movie.genres && movie.genres.length > 0) {
+                movie.genres.forEach(genre => {
+                    allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
+                });
+            }
+        });
+        
+        const genreSelect = document.getElementById('watchlistGenreFilter');
+        genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
+        
+        if (allGenres.size > 0) {
+            Array.from(allGenres)
+                .map(g => JSON.parse(g))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(genre => {
+                    genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
+                });
+        }
+
+        applyWatchlistFilters();
+        setupWatchlistFilterListeners();
+        
+    } catch (error) {
+        console.error('Erreur chargement watchlist:', error);
+        
+        // En cas d'erreur, essayer de charger depuis le cache
+        const cachedWatchlist = await OfflineCache.get('watchlist');
+        if (cachedWatchlist && cachedWatchlist.length > 0) {
+            state.watchlist = cachedWatchlist;
+            grid.innerHTML = '<div class="movies-grid">' + 
+                cachedWatchlist.map(m => createMovieCard(m)).join('') + 
+            '</div>';
+        } else {
+            grid.innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3></div>';
+        }
+    }
 }
 
 function setupWatchlistFilterListeners() {
@@ -352,7 +408,6 @@ function applyWatchlistFilters() {
         displayMovies(filtered, 'watchlistGrid');
     }
 }
-
 async function loadWatched() {
     if (!getToken()) {
         document.getElementById('watchedGrid').innerHTML = 
@@ -363,66 +418,125 @@ async function loadWatched() {
     const grid = document.getElementById('watchedGrid');
     grid.innerHTML = '<div class="loading">Chargement...</div>';
     
-    const watched = await apiRequest('/watched');
-    
-    if (!watched || watched.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><h3>Aucun film vu</h3></div>';
-        return;
-    }
-
-    state.watched = watched;
-    
-    const moviesWithDetails = await Promise.all(
-        watched.map(async (w) => {
-            try {
-                const response = await fetch(
-                    `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-                );
-                const data = await response.json();
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: data.release_date,
-                    genres: data.genres || []
-                };
-            } catch (e) {
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: null,
-                    genres: []
-                };
+    try {
+        let watched;
+        
+        // Essayer de récupérer depuis l'API
+        if (OfflineManager.isOnline) {
+            watched = await apiRequest('/watched');
+            
+            // Sauvegarder en cache
+            if (watched && watched.length > 0) {
+                await OfflineCache.save('watched', watched);
             }
-        })
-    );
-
-    state.watchedWithDetails = moviesWithDetails;
-    
-    const allGenres = new Set();
-    moviesWithDetails.forEach(movie => {
-        if (movie.genres && movie.genres.length > 0) {
-            movie.genres.forEach(genre => {
-                allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
-            });
+        } else {
+            // Mode offline : récupérer depuis le cache
+            watched = await OfflineCache.get('watched');
+            console.log('📡 Films vus chargés depuis le cache');
         }
-    });
-    
-    const genreSelect = document.getElementById('watchedGenreFilter');
-    genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
-    
-    if (allGenres.size > 0) {
-        Array.from(allGenres)
-            .map(g => JSON.parse(g))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .forEach(genre => {
-                genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
-            });
-    }
+        
+        if (!watched || watched.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>Aucun film vu</h3></div>';
+            return;
+        }
 
-    applyWatchedFilters();
-    setupWatchedFilterListeners();
+        state.watched = watched;
+        
+        // Récupérer les détails des films
+        const moviesWithDetails = await Promise.all(
+            watched.map(async (w) => {
+                try {
+                    let movieData;
+                    
+                    // Essayer de récupérer depuis le cache d'abord
+                    movieData = await OfflineCache.get('movieDetails', w.movie_id);
+                    
+                    // Si pas en cache et en ligne, récupérer depuis TMDB
+                    if (!movieData && OfflineManager.isOnline) {
+                        const response = await fetch(
+                            `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+                        );
+                        movieData = await response.json();
+                        
+                        // Sauvegarder en cache
+                        await OfflineCache.save('movieDetails', movieData);
+                    }
+                    
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title || movieData?.title,
+                        poster_path: w.movie_poster || movieData?.poster_path,
+                        release_date: movieData?.release_date || null,
+                        genres: movieData?.genres || []
+                    };
+                } catch (e) {
+                    // Fallback sur les données minimales
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title,
+                        poster_path: w.movie_poster,
+                        release_date: null,
+                        genres: []
+                    };
+                }
+            })
+        );
+
+        state.watchedWithDetails = moviesWithDetails;
+        
+        // Générer les filtres de genres
+        const allGenres = new Set();
+        moviesWithDetails.forEach(movie => {
+            if (movie.genres && movie.genres.length > 0) {
+                movie.genres.forEach(genre => {
+                    allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
+                });
+            }
+        });
+        
+        const genreSelect = document.getElementById('watchedGenreFilter');
+        genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
+        
+        if (allGenres.size > 0) {
+            Array.from(allGenres)
+                .map(g => JSON.parse(g))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(genre => {
+                    genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
+                });
+        }
+
+        applyWatchedFilters();
+        setupWatchedFilterListeners();
+        
+    } catch (error) {
+        console.error('Erreur chargement watched:', error);
+        
+        // En cas d'erreur, essayer de charger depuis le cache
+        const cachedWatched = await OfflineCache.get('watched');
+        if (cachedWatched && cachedWatched.length > 0) {
+            state.watched = cachedWatched;
+            grid.innerHTML = '<div class="movies-grid">' + 
+                cachedWatched.map(m => createMovieCard(m)).join('') + 
+            '</div>';
+        } else {
+            grid.innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3></div>';
+        }
+    }
+}
+
+function createMovieCard(movie) {
+    const poster = movie.movie_poster || movie.poster_path;
+    const title = movie.movie_title || movie.title;
+    const posterUrl = poster ? `${CONFIG.TMDB_IMG_URL}${poster}` : '';
+    
+    return `
+        <div class="movie-card" onclick="showMovieDetails(${movie.movie_id || movie.id})">
+            <div class="movie-poster">
+                ${posterUrl ? `<img src="${posterUrl}" alt="${title}">` : '🎬'}
+            </div>
+        </div>
+    `;
 }
 
 function setupWatchedFilterListeners() {
@@ -743,41 +857,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// 2. La fonction qui appelle l'API de recherche
-async function searchMovies(isScrollLoad = false) {
-    const grid = document.getElementById('moviesGrid');
-    const loader = document.querySelector('#infiniteScrollTrigger .loader');
-    const query = state.currentSearchQuery;
-
-    if (!query) return loadPopularMovies(); // Si vide, on remet les populaires
-
-    if (state.isLoading) return;
-    state.isLoading = true;
-    if (loader) loader.style.display = 'inline-block';
-
-    try {
-        const response = await fetch(
-            `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}&page=${state.currentPage}`
-        );
-        
-        const data = await response.json();
-        const newMovies = data.results;
-
-        if (state.currentPage === 1) {
-            state.movies = newMovies; // Remplacement total si page 1
-            grid.innerHTML = ''; // On vide la grille visuellement
-        } else {
-            state.movies = [...state.movies, ...newMovies]; // Ajout à la suite si scroll
-        }
-
-        displayMovies(newMovies, 'moviesGrid', isScrollLoad);
-        state.currentPage++;
-        
-    } catch (error) {
-        console.error('Erreur recherche:', error);
-    } finally {
-        state.isLoading = false;
-        if (loader) loader.style.display = 'none';
-    }
-}

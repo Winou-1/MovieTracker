@@ -1,21 +1,84 @@
+// modal-movie.js - Système de navigation swipe amélioré
+
 let currentMovieId = null;
+let currentMovieIndex = -1; // Index du film actuel dans la grille
+let currentGridMovies = []; // Liste des films de la grille actuelle
 let touchStartX = 0;
 let touchEndX = 0;
 let modalSwipeOffset = 0;
+let isDraggingModal = false;
+let swipeStartTime = 0;
 
-async function showMovieDetails(movieId) {
+async function showMovieDetails(movieId, fromGrid = null) {
     currentMovieId = movieId;
+    
+    // Récupérer les films de la grille actuelle
+    if (fromGrid || state.currentView === 'movies' || state.currentView === 'watchlist' || state.currentView === 'watched') {
+        currentGridMovies = getCurrentGridMovies();
+        currentMovieIndex = currentGridMovies.findIndex(m => m.id == movieId);
+    } else {
+        currentGridMovies = [];
+        currentMovieIndex = -1;
+    }
+    
     const modal = document.getElementById('movieModal');
     const modalContent = modal.querySelector('.modal-content');
     modalSwipeOffset = 0;
     if (modalContent) {
         modalContent.style.transform = 'translateX(0)';
+        modalContent.style.transition = '';
     }
     
     modal.classList.add('active');
     await loadMovieDetails(movieId);
     setupModalSwipe();
     setupBackButton();
+}
+
+// Récupérer les films de la grille actuelle
+function getCurrentGridMovies() {
+    const movies = [];
+    let gridSelector = '';
+    
+    // Déterminer quelle grille est active
+    if (state.currentView === 'watchlist') {
+        gridSelector = '#watchlistGrid';
+    } else if (state.currentView === 'watched') {
+        gridSelector = '#watchedGrid';
+    } else {
+        gridSelector = '#moviesGrid';
+    }
+    
+    // Récupérer tous les films de la grille
+    const movieCards = document.querySelectorAll(`${gridSelector} .movie-card`);
+    movieCards.forEach(card => {
+        const movieId = parseInt(card.dataset.movieId);
+        if (movieId) {
+            movies.push({ id: movieId });
+        }
+    });
+    
+    return movies;
+}
+
+// Naviguer vers le film précédent
+function navigateToPreviousMovie() {
+    if (currentMovieIndex > 0) {
+        currentMovieIndex--;
+        const prevMovie = currentGridMovies[currentMovieIndex];
+        loadMovieDetails(prevMovie.id);
+        currentMovieId = prevMovie.id;
+    }
+}
+
+// Naviguer vers le film suivant
+function navigateToNextMovie() {
+    if (currentMovieIndex < currentGridMovies.length - 1) {
+        currentMovieIndex++;
+        const nextMovie = currentGridMovies[currentMovieIndex];
+        loadMovieDetails(nextMovie.id);
+        currentMovieId = nextMovie.id;
+    }
 }
 
 async function loadMovieDetails(movieId) {
@@ -30,13 +93,11 @@ async function loadMovieDetails(movieId) {
             const likeStatus = await apiRequest(`/likes/${movieId}`);
             if (likeStatus) isLiked = likeStatus.liked;
         }
-        const modalContent = document.querySelector('#movieModal .modal-content');
-        // Charger les crédits
+        
         const creditsRes = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${CONFIG.TMDB_API_KEY}`);
         const credits = await creditsRes.json();
         let suggestedMovies = [];
         
-        // 1. Essayer la collection d'abord (pour les sagas)
         if (movie.belongs_to_collection) {
             try {
                 const collectionRes = await fetch(
@@ -55,7 +116,6 @@ async function loadMovieDetails(movieId) {
             }
         }
         
-        // 2. Si pas de collection ou pas assez de films, utiliser les recommandations
         if (suggestedMovies.length < 6) {
             try {
                 const recommendationsRes = await fetch(
@@ -75,7 +135,6 @@ async function loadMovieDetails(movieId) {
             }
         }
         
-        // 3. En dernier recours, utiliser similar
         if (suggestedMovies.length < 6) {
             try {
                 const similarRes = await fetch(
@@ -110,11 +169,14 @@ async function renderMovieModal(movie, credits, suggestedMovies, isCollection, i
     const backdrop = movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : poster;
     const cast = credits.cast?.slice(0, 8) || [];
     
-    // Charger les amis qui ont vu ce film
     let friendsSection = '';
     if (getToken()) {
         friendsSection = await showFriendsWhoWatched(movie.id);
     }
+    
+    // Indicateurs de navigation
+    const showPrevIndicator = currentMovieIndex > 0;
+    const showNextIndicator = currentMovieIndex < currentGridMovies.length - 1 && currentGridMovies.length > 0;
     
     modalContent.innerHTML = `
         <div class="movie-modal-new">
@@ -123,6 +185,8 @@ async function renderMovieModal(movie, credits, suggestedMovies, isCollection, i
                     <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
             </button>
+            
+            
             
             <button class="modal-heart-btn ${isLiked ? 'active' : ''}" 
                     onclick="toggleLike(this)">
@@ -228,7 +292,7 @@ async function renderMovieModal(movie, credits, suggestedMovies, isCollection, i
                         <h3 class="section-title">${isCollection ? 'Autres films de la saga' : 'Vous aimerez aussi'}</h3>
                         <div class="similar-movies-grid">
                             ${suggestedMovies.map(rec => `
-                                <div class="similar-movie-card" onclick="showMovieDetails(${rec.id})">
+                                <div class="similar-movie-card" onclick="showMovieDetails(${rec.id}, true)">
                                     <img src="${rec.poster_path ? `${CONFIG.TMDB_IMG_URL}${rec.poster_path}` : ''}" alt="${rec.title}">
                                     <div class="similar-movie-title">${rec.title}</div>
                                 </div>
@@ -273,21 +337,17 @@ async function setupModalRatingStars(movieId, currentRating = 0) {
         star.addEventListener('click', async () => {
             const rating = parseInt(star.dataset.value);
             
-            // Update visual
             stars.forEach(s => {
                 const sVal = parseInt(s.dataset.value);
                 s.classList.toggle('active', sVal <= rating);
             });
             
-            // Save to API
             await apiRequest('/ratings', {
                 method: 'POST',
                 body: JSON.stringify({ movie_id: movieId, rating })
             });
             
             showToast(`Note: ${rating}/10`);
-            
-            // Afficher le bouton de suppression
             updateClearButton(movieId, true);
         });
     });
@@ -328,13 +388,11 @@ function updateClearButton(movieId, show) {
     }
 }
 
-//fonction pour ouvrir Wikipedia de l'acteur
 function openActorWikipedia(actorName) {
     const encodedName = encodeURIComponent(actorName);
     window.open(`https://fr.wikipedia.org/wiki/${encodedName}`, '_blank');
 }
 
-// Toggle functions adaptées pour le nouveau modal
 async function toggleWatchlistFromModal(movieId, title, posterPath) {
     if (!getToken()) return;
     
@@ -405,50 +463,107 @@ async function toggleWatchedFromModal(movieId, title, posterPath) {
     }
 }
 
-// Swipe functionality
+// ✅ SYSTÈME DE SWIPE AMÉLIORÉ - Navigation entre films
 function setupModalSwipe() {
     const modalContent = document.querySelector('#movieModal .modal-content');
     if (!modalContent) return;
     
-    modalContent.addEventListener('touchstart', handleTouchStart, { passive: true });
-    modalContent.addEventListener('touchmove', handleTouchMove, { passive: false });
-    modalContent.addEventListener('touchend', handleTouchEnd, { passive: true });
+    modalContent.addEventListener('touchstart', handleModalTouchStart, { passive: true });
+    modalContent.addEventListener('touchmove', handleModalTouchMove, { passive: false });
+    modalContent.addEventListener('touchend', handleModalTouchEnd, { passive: true });
 }
 
-function handleTouchStart(e) {
+function handleModalTouchStart(e) {
     touchStartX = e.touches[0].clientX;
+    touchEndX = touchStartX;
+    swipeStartTime = Date.now();
+    isDraggingModal = false;
+    
+    // Déterminer si on est en haut du scroll
+    const modalContent = e.currentTarget;
+    const isAtTop = modalContent.scrollTop <= 10;
+    
+    // Autoriser le swipe seulement si on est en haut
+    if (isAtTop && currentGridMovies.length > 0) {
+        isDraggingModal = true;
+    }
 }
 
-function handleTouchMove(e) {
+function handleModalTouchMove(e) {
+    if (!isDraggingModal) return;
+    
     touchEndX = e.touches[0].clientX;
     const diff = touchEndX - touchStartX;
     
-    if (diff > 0) {
-        modalSwipeOffset = diff;
+    // Empêcher le scroll vertical pendant le swipe horizontal
+    if (Math.abs(diff) > 10) {
+        e.preventDefault();
+        
         const modalContent = e.currentTarget;
         modalContent.style.transform = `translateX(${diff}px)`;
         modalContent.style.transition = 'none';
+        
+        // Indicateur visuel
+        const opacity = Math.min(Math.abs(diff) / 150, 0.5);
+        if (diff > 0 && currentMovieIndex > 0) {
+            // Swipe vers la droite = film précédent
+            modalContent.style.background = `linear-gradient(to right, rgba(59, 130, 246, ${opacity}), transparent)`;
+        } else if (diff < 0 && currentMovieIndex < currentGridMovies.length - 1) {
+            // Swipe vers la gauche = film suivant
+            modalContent.style.background = `linear-gradient(to left, rgba(59, 130, 246, ${opacity}), transparent)`;
+        }
     }
 }
 
-function handleTouchEnd(e) {
+function handleModalTouchEnd(e) {
+    if (!isDraggingModal) return;
+    
     const modalContent = e.currentTarget;
     const diff = touchEndX - touchStartX;
+    const swipeDuration = Date.now() - swipeStartTime;
+    const swipeVelocity = Math.abs(diff) / swipeDuration;
     
-    if (diff > 150) {
-        modalContent.style.transition = 'transform 0.3s ease';
+    // Seuils : 100px ou vitesse rapide (0.5px/ms)
+    const threshold = 100;
+    const isQuickSwipe = swipeVelocity > 0.5;
+    
+    modalContent.style.transition = 'transform 0.3s ease, background 0.3s ease';
+    modalContent.style.background = '';
+    
+    // Swipe vers la droite (film précédent)
+    if ((diff > threshold || (diff > 50 && isQuickSwipe)) && currentMovieIndex > 0) {
         modalContent.style.transform = 'translateX(100%)';
         setTimeout(() => {
-            closeMovieModal();
+            modalContent.style.transition = 'none';
+            modalContent.style.transform = 'translateX(-100%)';
+            navigateToPreviousMovie();
+            setTimeout(() => {
+                modalContent.style.transition = 'transform 0.3s ease';
+                modalContent.style.transform = 'translateX(0)';
+            }, 50);
         }, 300);
-    } else {
-        modalContent.style.transition = 'transform 0.3s ease';
+    }
+    // Swipe vers la gauche (film suivant)
+    else if ((diff < -threshold || (diff < -50 && isQuickSwipe)) && currentMovieIndex < currentGridMovies.length - 1) {
+        modalContent.style.transform = 'translateX(-100%)';
+        setTimeout(() => {
+            modalContent.style.transition = 'none';
+            modalContent.style.transform = 'translateX(100%)';
+            navigateToNextMovie();
+            setTimeout(() => {
+                modalContent.style.transition = 'transform 0.3s ease';
+                modalContent.style.transform = 'translateX(0)';
+            }, 50);
+        }, 300);
+    }
+    // Retour à la position initiale
+    else {
         modalContent.style.transform = 'translateX(0)';
     }
     
+    isDraggingModal = false;
     touchStartX = 0;
     touchEndX = 0;
-    modalSwipeOffset = 0;
 }
 
 function setupBackButton() {
@@ -459,6 +574,8 @@ function closeMovieModal() {
     const modal = document.getElementById('movieModal');
     modal.classList.remove('active');
     currentMovieId = null;
+    currentMovieIndex = -1;
+    currentGridMovies = [];
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -467,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.style.display = 'none';
     }
 });
+
 async function toggleLike(btnElement) {
     if (!getToken()) {
         showToast('Connecte-toi pour aimer ce film', 'error');
@@ -476,10 +594,8 @@ async function toggleLike(btnElement) {
     const movieId = currentMovieId; 
     const isLiked = btnElement.classList.contains('active');
     
-    // Animation UI immédiate
     btnElement.classList.toggle('active');
     
-    // Mise à jour du SVG (Plein vs Vide)
     const svg = btnElement.querySelector('svg');
     if(svg) {
         svg.setAttribute('fill', !isLiked ? 'currentColor' : 'none');

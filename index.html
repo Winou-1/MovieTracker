@@ -31,11 +31,13 @@
     <link rel="stylesheet" href="css/modal-movie.css">
     <link rel="stylesheet" href="css/friends.css">
     <link rel="stylesheet" href="css/friend-profile-modal.css">
+    <link rel="stylesheet" href="css/loading-offline.css">
 
     <!-- JavaScript - ORDRE IMPORTANT -->    
      <script src="js/install-guard.js"></script>
     <script src="js/config.js"></script>
     <script src="js/forgot-password.js"></script>
+    <!--<script src="js/offline-cache.js"></script>--> 
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/swiper.js"></script>
@@ -45,6 +47,8 @@
     <script src="js/modal-movie.js"></script>
     <script src="js/language.js"></script>
     <script src="js/friends.js"></script>
+    <script src="js/loading.js"></script>
+    
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -382,44 +386,43 @@
     </div>
 
     <!-- Modal Cropper Avatar -->
-    <div id="cropperModal" class="modal" style="z-index: 2000;">
-    <div class="modal-content" style="
-        max-width: 500px; 
-        padding: 0; /* ✅ 0 padding = l'image touche les bords */
-        overflow: hidden; 
-        background: #000; 
-        display: flex; 
-        flex-direction: column;
-    ">
-        <div style="
-            width: 100%; 
-            background: #000;
-        ">
-            <img id="imageToCrop" style="max-width: 100%; display: block;">
+    <div id="cropperModal" class="modal">
+    <div class="modal-content">
+        <div class="cropper-container-wrapper">
+            <img id="imageToCrop" alt="Image à recadrer">
         </div>
-
-        <div style="
-            padding: 12px 16px; 
-            background: #1f2327; 
-            display: flex; 
-            justify-content: flex-end; 
-            gap: 12px;
-            border-top: 1px solid #334;
-        ">
-            <button id="cancelCropBtn" class="btn btn-secondary" style="
-                padding: 8px 16px; 
-                font-size: 14px;
-                border: none;
-                color: #ccc;
-            ">Annuler</button>
-            
-            <button id="cropAndSaveBtn" class="btn" style="
-                padding: 8px 20px;
-                font-size: 14px;
-            ">Valider</button>
+        
+        <div class="cropper-footer">
+            <button id="cancelCropBtn" class="btn-secondary">Annuler</button>
+            <button id="cropAndSaveBtn" class="btn">Valider</button>
         </div>
     </div>
 </div>
 </div>
+</div>
 </body>
+
+<!-- ==================== SPLASH SCREEN ==================== -->
+<div id="splashScreen" class="splash-screen">
+    <div class="splash-content">
+        <div class="splash-logo-container">
+            <div class="splash-logo">🎬</div>
+            <div class="splash-sparkle sparkle-1">✨</div>
+            <div class="splash-sparkle sparkle-2">✨</div>
+            <div class="splash-sparkle sparkle-3">✨</div>
+        </div>
+        <h1 class="splash-title">CineTrack</h1>
+        <div class="splash-loader">
+            <div class="splash-loader-bar"></div>
+        </div>
+        <p class="splash-subtitle">Découvre et note tes films préférés</p>
+    </div>
+</div>
+
+<!-- ==================== OFFLINE BANNER ==================== 
+<div id="offlineBanner" class="offline-banner">
+    <div class="offline-icon">📡</div>
+    <div class="offline-text">Mode hors ligne - Données locales disponibles</div>
+    <button class="offline-close" onclick="closeOfflineBanner()">×</button>
+</div>-->
 </html>
