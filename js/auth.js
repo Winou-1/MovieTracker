@@ -119,6 +119,8 @@ async function handleAuthSubmit() {
 
     if (data && data.token) {
         setToken(data.token);
+        localStorage.setItem('username', data.user.username);
+        localStorage.setItem('userEmail', data.user.email);
         state.user = data.user;
         state.userProfile.username = data.user.username;
         state.userProfile.email = data.user.email;

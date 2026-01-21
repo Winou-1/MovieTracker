@@ -368,6 +368,7 @@
     }
     
     .friend-profile-avatar {
+        padding-top: -50px;
         width: 100px;
         height: 100px;
     }
@@ -406,5 +407,345 @@
     .friend-profile-movies {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;
+    }
+}
+
+
+
+
+
+/* ==================== MODAL AMIS QUI ONT VU LE FILM ==================== */
+
+.friends-movie-modal-container {
+    max-width: 500px;
+    max-height: 80vh;
+    background: var(--bg-elevated);
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.friends-movie-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: none;
+    color: white;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.friends-movie-modal-close:hover {
+    background: rgba(255, 0, 0, 0.8);
+    transform: rotate(90deg);
+}
+
+/* Header */
+.friends-movie-modal-header {
+    padding: 32px 24px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+}
+
+.friends-movie-modal-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.friends-movie-modal-subtitle {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* Body avec scroll */
+.friends-movie-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.friends-movie-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.friends-movie-modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.friends-movie-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+/* Sections */
+.friends-movie-section {
+    margin-bottom: 28px;
+}
+
+.friends-movie-section:last-child {
+    margin-bottom: 0;
+}
+
+.friends-movie-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+.friends-movie-section-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.friends-movie-section-header h3 {
+    flex: 1;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.friends-movie-section-count {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Liste des amis */
+.friends-movie-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Item ami */
+.friends-movie-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.friends-movie-item:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+/* Avatar avec badge */
+.friends-movie-item-avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.friends-movie-item-avatar img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.friends-movie-item-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border: 2px solid var(--bg-card);
+}
+
+.friends-movie-item-badge.liked {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.friends-movie-item-badge.watched {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* Info ami */
+.friends-movie-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.friends-movie-item-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.friends-movie-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.friends-movie-item-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.friends-movie-item-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+}
+
+/* Flèche */
+.friends-movie-item-arrow {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.friends-movie-item:hover .friends-movie-item-arrow {
+    color: var(--primary);
+    transform: translateX(4px);
+}
+
+/* États vides/erreur/chargement */
+.friends-movie-modal-loading,
+.friends-movie-modal-empty,
+.friends-movie-modal-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+}
+
+.friends-movie-modal-empty-icon {
+    font-size: 72px;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.friends-movie-modal-empty h2,
+.friends-movie-modal-error h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.friends-movie-modal-empty p,
+.friends-movie-modal-error p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* badge cliquable dans le modal film */
+.movie-friends-badge {
+    transition: all 0.3s ease;
+}
+
+.movie-friends-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.movie-friends-badge:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .friends-movie-modal-container {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 24px 24px 0 0;
+    }
+    
+    .friends-movie-modal-header {
+        padding: 28px 20px 20px;
+    }
+    
+    .friends-movie-modal-header h2 {
+        font-size: 20px;
+    }
+    
+    .friends-movie-modal-body {
+        padding: 16px;
+    }
+    
+    .friends-movie-item {
+        padding: 12px;
+    }
+    
+    .friends-movie-item-avatar img {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .friends-movie-item-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+    
+    .friends-movie-item-name {
+        font-size: 15px;
+    }
+    
+    .friends-movie-item-meta {
+        font-size: 12px;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .friends-movie-modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .friends-movie-section-header h3 {
+        font-size: 16px;
+    }
+    
+    .friends-movie-item {
+        gap: 12px;
     }
 }

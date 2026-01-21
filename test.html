@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Animation - Cinema</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ==================== SPLASH SCREEN ==================== */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f1e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            animation: splashFadeOut 0.6s ease 3s forwards;
+            overflow: hidden;
+        }
+
+        /* Effet de lumière animée en arrière-plan */
+        .splash-screen::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(230, 57, 70, 0.15) 0%, transparent 60%);
+            animation: bgPulse 4s ease-in-out infinite;
+        }
+
+        /* Rayons de projecteur */
+        .light-rays {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            opacity: 0.3;
+        }
+
+        .ray {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            width: 2px;
+            height: 400px;
+            background: linear-gradient(to top, rgba(255, 215, 0, 0.5), transparent);
+            transform-origin: bottom center;
+            animation: rayRotate 8s linear infinite;
+        }
+
+        .ray:nth-child(1) { animation-delay: 0s; }
+        .ray:nth-child(2) { animation-delay: -2s; }
+        .ray:nth-child(3) { animation-delay: -4s; }
+        .ray:nth-child(4) { animation-delay: -6s; }
+
+        .splash-content {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .splash-logo-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 50px;
+            perspective: 1200px;
+        }
+
+        /* Cercle de chargement qui se transforme */
+        .splash-loader-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130px;
+            height: 130px;
+            border: 5px solid rgba(230, 57, 70, 0.2);
+            border-top-color: #e63946;
+            border-right-color: #ffd700;
+            border-radius: 50%;
+            animation: circleToFilm 2.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* Pellicule de cinéma */
+        .cinema-film {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 160px;
+            height: 110px;
+            opacity: 0;
+            animation: filmAppear 1.2s ease 1.3s forwards;
+        }
+
+        .film-strip {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 0 50px rgba(230, 57, 70, 0.5), 0 0 100px rgba(255, 215, 0, 0.2);
+            animation: filmGlow 2s ease-in-out infinite;
+            border: 2px solid rgba(230, 57, 70, 0.3);
+        }
+
+        /* Bords perforés de la pellicule */
+        .film-holes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hole {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #0a0a0a;
+            border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Trous gauche */
+        .hole-left-1 { top: 15px; left: 8px; animation: holePulse 1s ease infinite 0s; }
+        .hole-left-2 { top: 40px; left: 8px; animation: holePulse 1s ease infinite 0.2s; }
+        .hole-left-3 { top: 65px; left: 8px; animation: holePulse 1s ease infinite 0.4s; }
+        .hole-left-4 { bottom: 15px; left: 8px; animation: holePulse 1s ease infinite 0.6s; }
+
+        /* Trous droite */
+        .hole-right-1 { top: 15px; right: 8px; animation: holePulse 1s ease infinite 0.1s; }
+        .hole-right-2 { top: 40px; right: 8px; animation: holePulse 1s ease infinite 0.3s; }
+        .hole-right-3 { top: 65px; right: 8px; animation: holePulse 1s ease infinite 0.5s; }
+        .hole-right-4 { bottom: 15px; right: 8px; animation: holePulse 1s ease infinite 0.7s; }
+
+        /* Frame central avec clap de cinéma */
+        .film-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: frameFloat 3s ease-in-out infinite;
+        }
+
+        /* Clap de cinéma */
+        .clap-board {
+            position: relative;
+            width: 60px;
+            height: 50px;
+        }
+
+        .clap-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            border-radius: 4px 4px 0 0;
+            transform-origin: bottom;
+            animation: clapAnimation 1.5s ease-in-out infinite;
+            z-index: 2;
+        }
+
+        .clap-top::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            right: 5px;
+            height: 3px;
+            background: repeating-linear-gradient(
+                90deg,
+                #000 0px,
+                #000 8px,
+                #fff 8px,
+                #fff 16px
+            );
+        }
+
+        .clap-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 35px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e63946;
+            box-shadow: 0 5px 20px rgba(230, 57, 70, 0.4);
+        }
+
+        .clap-text {
+            color: #ffd700;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Étoiles dorées autour */
+        .cinema-star {
+            position: absolute;
+            font-size: 24px;
+            animation: starTwinkle 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+        }
+
+        .star-1 { top: -10px; left: -10px; animation-delay: 0s; }
+        .star-2 { top: -10px; right: -10px; animation-delay: 0.4s; }
+        .star-3 { bottom: -10px; left: 10px; animation-delay: 0.8s; }
+        .star-4 { bottom: -10px; right: 10px; animation-delay: 1.2s; }
+        .star-5 { top: 50%; left: -20px; animation-delay: 0.2s; }
+        .star-6 { top: 50%; right: -20px; animation-delay: 0.6s; }
+
+        .splash-title {
+            font-size: 52px;
+            font-weight: 900;
+            color: white;
+            margin: 0 0 25px 0;
+            letter-spacing: 4px;
+            animation: titleReveal 1.2s ease 0.5s backwards;
+            text-shadow: 0 0 40px rgba(230, 57, 70, 0.6), 0 0 80px rgba(255, 215, 0, 0.3);
+            background: linear-gradient(135deg, #ffffff 0%, #ffd700 50%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+            animation: titleReveal 1.2s ease 0.5s backwards, titleShine 3s linear infinite;
+        }
+
+        .splash-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+            margin: 0 0 40px 0;
+            font-weight: 500;
+            animation: subtitleSlide 1s ease 0.9s backwards;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Barre de progression cinématique */
+        .progress-bar-container {
+            width: 350px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            margin: 0 auto;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e63946 0%, #ffd700 50%, #e63946 100%);
+            background-size: 200% 100%;
+            border-radius: 10px;
+            animation: progressFill 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards, progressShine 2s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(230, 57, 70, 0.6);
+        }
+
+        .progress-percentage {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes splashFadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        @keyframes bgPulse {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2) rotate(180deg);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes rayRotate {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes circleToFilm {
+            0% {
+                width: 130px;
+                height: 130px;
+                border-radius: 50%;
+                transform: translate(-50%, -50%) rotate(0deg);
+                opacity: 1;
+            }
+            45% {
+                width: 130px;
+                height: 130px;
+                border-radius: 50%;
+                transform: translate(-50%, -50%) rotate(1080deg);
+                opacity: 1;
+            }
+            65% {
+                width: 160px;
+                height: 110px;
+                border-radius: 10px;
+                transform: translate(-50%, -50%) rotate(1080deg) scale(1.3);
+                opacity: 0.3;
+            }
+            100% {
+                width: 160px;
+                height: 110px;
+                border-radius: 10px;
+                transform: translate(-50%, -50%) rotate(1080deg) scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes filmAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.3) rotateY(180deg);
+            }
+            60% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.15) rotateY(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+            }
+        }
+
+        @keyframes filmGlow {
+            0%, 100% {
+                box-shadow: 0 0 50px rgba(230, 57, 70, 0.5), 0 0 100px rgba(255, 215, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 80px rgba(230, 57, 70, 0.8), 0 0 150px rgba(255, 215, 0, 0.4);
+            }
+        }
+
+        @keyframes holePulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(0.9);
+            }
+        }
+
+        @keyframes frameFloat {
+            0%, 100% {
+                transform: translate(-50%, -50%) translateY(0px);
+            }
+            50% {
+                transform: translate(-50%, -50%) translateY(-5px);
+            }
+        }
+
+        @keyframes clapAnimation {
+            0%, 80%, 100% {
+                transform: rotateX(0deg);
+            }
+            85%, 95% {
+                transform: rotateX(-25deg);
+            }
+            90% {
+                transform: rotateX(0deg);
+            }
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+            50% {
+                opacity: 0.3;
+                transform: scale(0.7) rotate(180deg);
+            }
+        }
+
+        @keyframes titleReveal {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.8);
+                letter-spacing: 15px;
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                letter-spacing: 4px;
+            }
+        }
+
+        @keyframes titleShine {
+            0% {
+                background-position: 0% center;
+            }
+            100% {
+                background-position: 200% center;
+            }
+        }
+
+        @keyframes subtitleSlide {
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes progressFill {
+            from {
+                width: 0%;
+            }
+            to {
+                width: 100%;
+            }
+        }
+
+        @keyframes progressShine {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        /* ==================== CONTENU PRINCIPAL ==================== */
+        .main-content {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .main-content h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #e63946, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .main-content p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .splash-logo-container {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .splash-loader-circle {
+                width: 110px;
+                height: 110px;
+            }
+            
+            .cinema-film {
+                width: 140px;
+                height: 95px;
+            }
+            
+            .clap-board {
+                width: 50px;
+                height: 42px;
+            }
+            
+            .clap-top {
+                height: 12px;
+            }
+            
+            .clap-bottom {
+                height: 30px;
+            }
+            
+            .clap-text {
+                font-size: 8px;
+            }
+            
+            .cinema-star {
+                font-size: 20px;
+            }
+            
+            .splash-title {
+                font-size: 38px;
+            }
+            
+            .splash-subtitle {
+                font-size: 15px;
+            }
+            
+            .progress-bar-container {
+                width: 280px;
+                bottom: 60px;
+            }
+
+            .ray {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <!-- Rayons de lumière -->
+        <div class="light-rays">
+            <div class="ray"></div>
+            <div class="ray"></div>
+            <div class="ray"></div>
+            <div class="ray"></div>
+        </div>
+
+        <div class="splash-content">
+            <div class="splash-logo-container">
+                <!-- Cercle qui se transforme -->
+                <div class="splash-loader-circle"></div>
+                
+                <!-- Pellicule de cinéma -->
+                <div class="cinema-film">
+                    <div class="film-strip">
+                        <!-- Trous de pellicule -->
+                        <div class="film-holes">
+                            <div class="hole hole-left-1"></div>
+                            <div class="hole hole-left-2"></div>
+                            <div class="hole hole-left-3"></div>
+                            <div class="hole hole-left-4"></div>
+                            <div class="hole hole-right-1"></div>
+                            <div class="hole hole-right-2"></div>
+                            <div class="hole hole-right-3"></div>
+                            <div class="hole hole-right-4"></div>
+                        </div>
+                        
+                        <!-- Clap de cinéma au centre -->
+                        <div class="film-frame">
+                            <div class="clap-board">
+                                <div class="clap-top"></div>
+                                <div class="clap-bottom">
+                                    <span class="clap-text">FILM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Étoiles dorées -->
+                <div class="cinema-star star-1">⭐</div>
+                <div class="cinema-star star-2">✨</div>
+                <div class="cinema-star star-3">⭐</div>
+                <div class="cinema-star star-4">✨</div>
+                <div class="cinema-star star-5">⭐</div>
+                <div class="cinema-star star-6">✨</div>
+            </div>
+            
+            <h1 class="splash-title">CINÉMA</h1>
+            <p class="splash-subtitle">Chargement...</p>
+            
+            <!-- Barre de progression -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-percentage">Préparation de votre expérience</div>
+        </div>
+    </div>
+
+    <script>
+        // Masquer le splash screen après 3.5 secondes
+        setTimeout(() => {
+            document.getElementById('splashScreen').style.display = 'none';
+        }, 3600);
+    </script>
+</body>
+</html>

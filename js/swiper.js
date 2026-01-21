@@ -1,12 +1,3 @@
-// ============================================
-// SYSTÈME DE RECOMMANDATION INTELLIGENT V2
-// ============================================
-// Améliorations :
-// - Tracking des films "skip" pour ne jamais les reproposer
-// - Pool de films plus large (50+ films par session)
-// - Diversité maximale avec rotation des sources
-// - Cache intelligent pour éviter les doublons
-
 const RECOMMENDATION_STRATEGY = {
     COLD_START_THRESHOLD: 5,
     LEARNING_THRESHOLD: 15,
@@ -33,14 +24,10 @@ const RECOMMENDATION_STRATEGY = {
     }
 };
 
-// Cache GLOBAL pour tracker TOUS les films déjà vus (même skip)
 if (!state.seenMovieIds) {
     state.seenMovieIds = new Set();
 }
 
-// ============================================
-// FONCTION PRINCIPALE AMÉLIORÉE
-// ============================================
 async function loadSwiperMovies() {
     if (!getToken()) {
         document.getElementById('swiperContainer').innerHTML = `
@@ -116,9 +103,6 @@ function getRecommendationPhase(watchedCount) {
     }
 }
 
-// ============================================
-// PHASE COLD START - VERSION AMÉLIORÉE
-// ============================================
 async function loadColdStartMovies(watchedMovies) {
     console.log('🌟 Cold Start - Films populaires diversifiés');
     

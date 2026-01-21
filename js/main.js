@@ -33,22 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!getToken()) openAuthModal(true);
         else switchView('profile');
     });
-
-    // Navigation Mobile
     setupMobileNavigation();
-
-    // ✅ GESTION DE LA RECHERCHE PRINCIPALE
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     
     let searchTimeout;
-    
-    // Recherche en temps réel à chaque frappe
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         const query = e.target.value.trim();
-        
-        // Si le champ est vide, retour aux films populaires
         if (!query) {
             state.isSearchMode = false;
             state.currentSearchQuery = '';
@@ -56,8 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPopularMovies(false);
             return;
         }
-        
-        // Attendre 500ms après la dernière frappe avant de rechercher
         searchTimeout = setTimeout(() => {
             state.isSearchMode = true;
             state.currentSearchQuery = query;
@@ -121,8 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    // Navigation Desktop - ajoute après navProfile
     document.getElementById('navFriends').addEventListener('click', (e) => {
         e.preventDefault();
         if (!getToken()) openAuthModal(true);
@@ -138,22 +126,25 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMobileNav('mobileNavFilms');
         window.history.pushState({ view: 'movies' }, '', '');
     });
-
-    // Init
     const token = getToken();
     if (token) {
         state.token = token;
         const savedUsername = localStorage.getItem('username');
-        apiRequest('/stats').then(data => {
-            if (data) {
+        const savedEmail = localStorage.getItem('userEmail');
+        apiRequest('/profile').then(userProfile => {
+            if (userProfile) {
+                state.user = userProfile;
+                state.userProfile.username = userProfile.username;
+                state.userProfile.email = userProfile.email;
+                state.userProfile.avatar = userProfile.avatar;
+                localStorage.setItem('username', userProfile.username);
+            } else {
                 state.user = { username: savedUsername || 'Utilisateur' };
                 state.userProfile.username = state.user.username;
-                state.userProfile.email = localStorage.getItem('userEmail') || '';
-                
-                updateUI();
-                loadUserData();
-                setupMobileProfileClick();
             }
+            updateUI();
+            loadUserData();
+            if (typeof loadFriends === 'function') loadFriends();
         });
     }
 

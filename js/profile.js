@@ -182,6 +182,7 @@ function renderProfile() {
             <div class="profile-info">
                 <h2>${user.username}</h2>
                 <p class="profile-email">${user.email}</p>
+                <p style="color:var(--text-muted); font-family:monospace; font-size:1.1em; letter-spacing:2px; margin-top:8px;">#${user.friend_code || '000000'}</p>
             </div>
         </div>
     </div>
@@ -551,7 +552,6 @@ function toggleSetting(setting, element) {
     showToast(`${setting === 'notifications' ? 'Notifications' : 'Lecture auto'} ${profileData.settings[setting] ? 'activée' : 'désactivée'}`);
 }
 
-// ✅ Modifier le pseudo avec modal
 function editUsername() {
     const currentUsername = profileData.user.username;
     
@@ -597,6 +597,8 @@ function editUsername() {
         document.getElementById('newUsernameInput').focus();
         document.getElementById('newUsernameInput').select();
     }, 100);
+    localStorage.setItem('username', newUsername);
+    updateUI();
     
     document.getElementById('newUsernameInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -811,7 +813,6 @@ function editEmail() {
     });
 }
 
-// 2. Fonction pour SAUVEGARDER (Contient ta logique de validation et API)
 async function saveNewEmail() {
     const input = document.getElementById('newEmailInput');
     const newEmail = input.value.trim();
@@ -841,12 +842,11 @@ async function saveNewEmail() {
         if (response && !response.error) {
             profileData.user.email = newEmail;
             
-            // Mise à jour de l'affichage
             const emailDisplay = document.querySelector('.profile-email');
             if (emailDisplay) emailDisplay.textContent = newEmail;
             
             showToast('Email mis à jour avec succès !', 'success');
-            loadUserProfile(); // Rechargement complet
+            loadUserProfile();
             closeEmailModal();
         } else {
             showToast(response?.error || 'Erreur lors du changement d\'email', 'error');
@@ -861,13 +861,12 @@ async function saveNewEmail() {
 function closeEmailModal() {
     const modal = document.getElementById('emailEditModal');
     if (modal) {
-        modal.remove(); // Supprime l'élément du DOM
-        document.body.style.overflow = ''; // Réactive le scroll
+        modal.remove();
+        document.body.style.overflow = '';
     }
 }
 
 function editPassword() {
-    // La fonction est maintenant dans forgot-password.js
     if (typeof window.openForgotPasswordModalprofile() === 'function') {
         window.openForgotPasswordModalprofile();
     }

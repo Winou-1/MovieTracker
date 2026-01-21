@@ -54,7 +54,67 @@
     <link rel="apple-touch-icon" href="icon.png">
 </head>
 <body>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <!-- Rayons de lumière -->
+        <div class="light-rays">
+            <div class="ray"></div>
+            <div class="ray"></div>
+            <div class="ray"></div>
+            <div class="ray"></div>
+        </div>
 
+        <div class="splash-content">
+            <div class="splash-logo-container">
+                <!-- Cercle qui se transforme -->
+                <div class="splash-loader-circle"></div>
+                
+                <!-- Pellicule de cinéma -->
+                <div class="cinema-film">
+                    <div class="film-strip">
+                        <!-- Trous de pellicule -->
+                        <div class="film-holes">
+                            <div class="hole hole-left-1"></div>
+                            <div class="hole hole-left-2"></div>
+                            <div class="hole hole-left-3"></div>
+                            <div class="hole hole-left-4"></div>
+                            <div class="hole hole-right-1"></div>
+                            <div class="hole hole-right-2"></div>
+                            <div class="hole hole-right-3"></div>
+                            <div class="hole hole-right-4"></div>
+                        </div>
+                        
+                        <!-- Clap de cinéma au centre -->
+                        <div class="film-frame">
+                            <div class="clap-board">
+                                <div class="clap-top"></div>
+                                <div class="clap-bottom">
+                                    <span class="clap-text">FILM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Étoiles dorées -->
+                <div class="cinema-star star-1">⭐</div>
+                <div class="cinema-star star-2">✨</div>
+                <div class="cinema-star star-3">⭐</div>
+                <div class="cinema-star star-4">✨</div>
+                <div class="cinema-star star-5">⭐</div>
+                <div class="cinema-star star-6">✨</div>
+            </div>
+            
+            <h1 class="splash-title">CINÉMA</h1>
+            <p class="splash-subtitle">Chargement...</p>
+            
+            <!-- Barre de progression -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-percentage">Préparation de votre expérience</div>
+        </div>
+    </div>
     <!-- Header -->
     <header>
         <nav class="container">
@@ -202,6 +262,8 @@
                                     <option value="date-asc">Date de sortie (croissant)</option>
                                     <option value="date-desc">Date de sortie (décroissant)</option>
                                     <option value="added-desc">Récemment ajouté</option>
+                                    <option value="rating-desc">Note (meilleure d'abord)</option>
+                                    <option value="rating-asc">Note (moins bonne d'abord)</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -397,32 +459,20 @@
             <button id="cropAndSaveBtn" class="btn">Valider</button>
         </div>
     </div>
+
+    <div id="friendsInteractionModal" class="friends-interaction-modal">
+    <div class="friends-interaction-modal-content">
+        <span class="friends-interaction-modal-close">&times;</span>
+        <h3>Amis ayant interagi avec ce film</h3>
+        <div id="friendsInteractionList" class="friends-interaction-list">
+            <!-- Les amis seront ajoutés ici dynamiquement -->
+        </div>
+    </div>
+</div>
+
 </div>
 </div>
 </div>
 </body>
 
-<!-- ==================== SPLASH SCREEN ==================== -->
-<div id="splashScreen" class="splash-screen">
-    <div class="splash-content">
-        <div class="splash-logo-container">
-            <div class="splash-logo">🎬</div>
-            <div class="splash-sparkle sparkle-1">✨</div>
-            <div class="splash-sparkle sparkle-2">✨</div>
-            <div class="splash-sparkle sparkle-3">✨</div>
-        </div>
-        <h1 class="splash-title">CineTrack</h1>
-        <div class="splash-loader">
-            <div class="splash-loader-bar"></div>
-        </div>
-        <p class="splash-subtitle">Découvre et note tes films préférés</p>
-    </div>
-</div>
-
-<!-- ==================== OFFLINE BANNER ==================== 
-<div id="offlineBanner" class="offline-banner">
-    <div class="offline-icon">📡</div>
-    <div class="offline-text">Mode hors ligne - Données locales disponibles</div>
-    <button class="offline-close" onclick="closeOfflineBanner()">×</button>
-</div>-->
 </html>

@@ -649,3 +649,29 @@ window.showFriendsWhoWatched = async function(movieId) {
         return '';
     }
 };
+
+// FERMETURE DES MODALS AU CLIC À L'EXTÉRIEUR
+window.addEventListener('click', (event) => {
+    const friendsInteractionModal = document.getElementById('friendsInteractionModal');
+    if (friendsInteractionModal && event.target === friendsInteractionModal) {
+        friendsInteractionModal.style.display = 'none';
+    }
+    const movieModal = document.getElementById('movieModal');
+    if (movieModal && event.target === movieModal) {
+        if (typeof closeMovieModal === 'function') {
+            closeMovieModal();
+        } else {
+            movieModal.style.display = 'none';
+            movieModal.classList.remove('active');
+        }
+    }
+    
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal && event.target === settingsModal) {
+        if (typeof closeSettings === 'function') {
+            closeSettings();
+        } else {
+            settingsModal.classList.remove('active');
+        }
+    }
+});

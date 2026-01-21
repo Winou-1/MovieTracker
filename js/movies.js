@@ -135,10 +135,19 @@ function displayMovies(movies, gridId, shouldAppend = false) {
         const showWatchlistBadge = inWatchlist && !isWatchlistGrid;
         const showWatchedBadge = isWatched && !isWatchedGrid;
         
+        let posterUrl = '';
+        if (movie.poster_path) {
+            if (movie.poster_path.startsWith('/')) {
+                posterUrl = `${CONFIG.TMDB_IMG_URL}${movie.poster_path}`;
+            } else {
+                posterUrl = movie.poster_path;
+            }
+        }
+        
         return `
             <div class="movie-card" data-movie-id="${movie.id}" onclick="showMovieDetails(${movie.id})">
                 <div class="movie-poster">
-                    ${movie.poster_path ? `<img src="${CONFIG.TMDB_IMG_URL}${movie.poster_path}" alt="${movie.title}">` : '🎬'}
+                    ${posterUrl ? `<img src="${posterUrl}" alt="${movie.title}">` : '🎬'}
                     ${showWatchlistBadge ? '<div class="watchlist-badge">À voir</div>' : ''}
                     ${showWatchedBadge ? '<div class="watched-badge">✓ Vu</div>' : ''}
                 </div>
@@ -172,76 +181,213 @@ async function showTrailer(movieId) {
     }
 }
 
-async function loadWatchlist() {
+function displayMovies(movies, gridId, shouldAppend = false) {
+    const grid = document.getElementById(gridId);
+    
+    if (movies.length === 0) {
+        if (!shouldAppend) {
+            grid.innerHTML = '<div class="empty-state"><h3>Aucun film trouvé</h3></div>';
+        }
+        return;
+    }
+
+    const isWatchlistGrid = gridId === 'watchlistGrid';
+    const isWatchedGrid = gridId === 'watchedGrid';
+
+    const moviesHtml = movies.map(movie => {
+        const inWatchlist = state.watchlist.some(w => w.movie_id == movie.id);
+        const isWatched = state.watched.some(w => w.movie_id == movie.id);
+        
+        const showWatchlistBadge = inWatchlist && !isWatchlistGrid;
+        const showWatchedBadge = isWatched && !isWatchedGrid;
+        
+        let posterUrl = '';
+        if (movie.poster_path) {
+            if (movie.poster_path.startsWith('/')) {
+                posterUrl = `${CONFIG.TMDB_IMG_URL}${movie.poster_path}`;
+            } else {
+                posterUrl = movie.poster_path;
+            }
+        }
+        
+        return `
+            <div class="movie-card" data-movie-id="${movie.id}" onclick="showMovieDetails(${movie.id})">
+                <div class="movie-poster">
+                    ${posterUrl ? `<img src="${posterUrl}" alt="${movie.title}">` : '🎬'}
+                    ${showWatchlistBadge ? '<div class="watchlist-badge">À voir</div>' : ''}
+                    ${showWatchedBadge ? '<div class="watched-badge">✓ Vu</div>' : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (shouldAppend) {
+        grid.insertAdjacentHTML('beforeend', moviesHtml);
+    } else {
+        grid.innerHTML = moviesHtml;
+    }
+}
+
+if (!state.watchlistPage) state.watchlistPage = 1;
+if (!state.watchlistLoading) state.watchlistLoading = false;
+if (!state.watchlistAllMovies) state.watchlistAllMovies = [];
+const MOVIES_PER_PAGE = 20;
+
+async function loadWatchlist(isLoadMore = false) {
     if (!getToken()) {
         document.getElementById('watchlistGrid').innerHTML = 
             '<div class="empty-state"><h3>Connecte-toi pour voir ta watchlist</h3></div>';
         return;
     }
 
+    if (state.watchlistLoading) return;
+    state.watchlistLoading = true;
+
     const grid = document.getElementById('watchlistGrid');
-    grid.innerHTML = '<div class="loading">Chargement...</div>';
     
-    const watchlist = await apiRequest('/watchlist');
+    if (!isLoadMore) {
+        grid.innerHTML = '<div class="loading">Chargement...</div>';
+        state.watchlistPage = 1;
+        state.watchlistAllMovies = [];
+    }
     
-    if (!watchlist || watchlist.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
+    if (state.watchlistAllMovies.length === 0) {
+        const watchlist = await apiRequest('/watchlist');
+        
+        if (!watchlist || watchlist.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
+            state.watchlistLoading = false;
+            return;
+        }
+
+        state.watchlist = watchlist;
+        
+        const sortedWatchlist = watchlist.sort((a, b) => 
+            new Date(b.added_at) - new Date(a.added_at)
+        );
+        
+         const moviesWithDetails = await Promise.all(
+            sortedWatchlist.map(async (w) => {
+                try {
+                    const response = await fetch(
+                        `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+                    );
+                    const data = await response.json();
+                    
+                    let userRating = null;
+                    try {
+                        const ratingData = await apiRequest(`/ratings/${w.movie_id}`);
+                        if (ratingData && ratingData.rating) {
+                            userRating = ratingData.rating;
+                        }
+                    } catch (e) {
+                        console.log('Pas de note pour', w.movie_id);
+                    }
+                    
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title || data.title,
+                        poster_path: data.poster_path || w.movie_poster,
+                        release_date: data.release_date,
+                        genres: data.genres || [],
+                        watched_at: w.watched_at,
+                        user_rating: userRating 
+                    };
+                } catch (e) {
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title,
+                        poster_path: w.movie_poster,
+                        release_date: null,
+                        genres: [],
+                        watched_at: w.watched_at,
+                        user_rating: null
+                    };
+                }
+            })
+        );
+        state.watchlistAllMovies = moviesWithDetails;
+        state.watchlistWithDetails = moviesWithDetails;
+        
+        // Charger les genres
+        const allGenres = new Set();
+        moviesWithDetails.forEach(movie => {
+            if (movie.genres && movie.genres.length > 0) {
+                movie.genres.forEach(genre => {
+                    allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
+                });
+            }
+        });
+        
+        const genreSelect = document.getElementById('watchlistGenreFilter');
+        if (genreSelect) {
+            genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
+            
+            if (allGenres.size > 0) {
+                Array.from(allGenres)
+                    .map(g => JSON.parse(g))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .forEach(genre => {
+                        genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
+                    });
+            }
+        }
+        
+        const sortSelect = document.getElementById('watchlistSortBy');
+        if (sortSelect) {
+            sortSelect.value = 'added-desc';
+        }
+    }
+    
+    // Pagination
+    const start = (state.watchlistPage - 1) * MOVIES_PER_PAGE;
+    const end = start + MOVIES_PER_PAGE;
+    const chunk = state.watchlistAllMovies.slice(start, end);
+    
+    if (chunk.length === 0) {
+        state.watchlistLoading = false;
         return;
     }
-
-    state.watchlist = watchlist;
     
-    const moviesWithDetails = await Promise.all(
-        watchlist.map(async (w) => {
-            try {
-                const response = await fetch(
-                    `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-                );
-                const data = await response.json();
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: data.release_date,
-                    genres: data.genres || []
-                };
-            } catch (e) {
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: null,
-                    genres: []
-                };
-            }
-        })
-    );
-
-    state.watchlistWithDetails = moviesWithDetails;
+    state.watchlistLoading = false;
+    displayMovies(chunk, 'watchlistGrid', isLoadMore);
     
-    const allGenres = new Set();
-    moviesWithDetails.forEach(movie => {
-        if (movie.genres && movie.genres.length > 0) {
-            movie.genres.forEach(genre => {
-                allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
-            });
-        }
-    });
-    
-    const genreSelect = document.getElementById('watchlistGenreFilter');
-    genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
-    
-    if (allGenres.size > 0) {
-        Array.from(allGenres)
-            .map(g => JSON.parse(g))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .forEach(genre => {
-                genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
-            });
+    if (!isLoadMore) {
+        setupWatchlistFilterListeners();
+        
     }
+    setupWatchlistInfiniteScroll();
+}
 
-    applyWatchlistFilters();
-    setupWatchlistFilterListeners();
+function setupWatchlistInfiniteScroll() {
+    const grid = document.getElementById('watchlistGrid');
+    if (!grid) return;
+    
+    if (state.watchlistObserver) {
+        state.watchlistObserver.disconnect();
+    }
+    
+    state.watchlistObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !state.watchlistLoading) {
+            const totalPages = Math.ceil(state.watchlistAllMovies.length / MOVIES_PER_PAGE);
+            if (state.watchlistPage < totalPages) {
+                console.log('📥 Chargement page', state.watchlistPage + 1, '/', totalPages);
+                state.watchlistPage++;
+                loadWatchlist(true);
+            }
+        }
+    }, {
+        rootMargin: '200px',
+        threshold: 0.1
+    });
+
+    const cards = grid.querySelectorAll('.movie-card');
+    const lastCard = cards[cards.length - 1];
+    
+    if (lastCard) {
+        state.watchlistObserver.observe(lastCard);
+        console.log('👁️ Observer attaché sur carte', cards.length);
+    }
 }
 
 function setupWatchlistFilterListeners() {
@@ -365,77 +511,154 @@ function applyWatchlistFilters() {
     }
 }
 
-async function loadWatched() {
+if (!state.watchedPage) state.watchedPage = 1;
+if (!state.watchedLoading) state.watchedLoading = false;
+if (!state.watchedAllMovies) state.watchedAllMovies = [];
+
+async function loadWatched(isLoadMore = false) {
     if (!getToken()) {
         document.getElementById('watchedGrid').innerHTML = 
             '<div class="empty-state"><h3>Connecte-toi</h3></div>';
         return;
     }
 
+    if (state.watchedLoading) return;
+    state.watchedLoading = true;
+
     const grid = document.getElementById('watchedGrid');
-    grid.innerHTML = '<div class="loading">Chargement...</div>';
     
-    const watched = await apiRequest('/watched');
+    if (!isLoadMore) {
+        grid.innerHTML = '<div class="loading">Chargement...</div>';
+        state.watchedPage = 1;
+        state.watchedAllMovies = [];
+    }
     
-    if (!watched || watched.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><h3>Aucun film vu</h3></div>';
+    // Charger toutes les données une seule fois
+    if (state.watchedAllMovies.length === 0) {
+        const watched = await apiRequest('/watched');
+        
+        if (!watched || watched.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><h3>Aucun film vu</h3></div>';
+            state.watchedLoading = false;
+            return;
+        }
+
+        state.watched = watched;
+        
+        const sortedWatched = watched.sort((a, b) => 
+            new Date(b.watched_at) - new Date(a.watched_at)
+        );
+        
+        const moviesWithDetails = await Promise.all(
+            sortedWatched.map(async (w) => {
+                try {
+                    const response = await fetch(
+                        `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+                    );
+                    const data = await response.json();
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title || data.title,
+                        poster_path: data.poster_path || w.movie_poster, // ✅ Priorité au poster TMDB
+                        release_date: data.release_date,
+                        genres: data.genres || [],
+                        watched_at: w.watched_at
+                    };
+                } catch (e) {
+                    return {
+                        id: w.movie_id,
+                        title: w.movie_title,
+                        poster_path: w.movie_poster,
+                        release_date: null,
+                        genres: [],
+                        watched_at: w.watched_at
+                    };
+                }
+            })
+        );
+
+        state.watchedAllMovies = moviesWithDetails;
+        state.watchedWithDetails = moviesWithDetails;
+        
+        const allGenres = new Set();
+        moviesWithDetails.forEach(movie => {
+            if (movie.genres && movie.genres.length > 0) {
+                movie.genres.forEach(genre => {
+                    allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
+                });
+            }
+        });
+        
+        const genreSelect = document.getElementById('watchedGenreFilter');
+        if (genreSelect) {
+            genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
+            
+            if (allGenres.size > 0) {
+                Array.from(allGenres)
+                    .map(g => JSON.parse(g))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .forEach(genre => {
+                        genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
+                    });
+            }
+        }
+        
+        const sortSelect = document.getElementById('watchedSortBy');
+        if (sortSelect) {
+            sortSelect.value = 'added-desc';
+        }
+    }
+    
+    const start = (state.watchedPage - 1) * MOVIES_PER_PAGE;
+    const end = start + MOVIES_PER_PAGE;
+    const chunk = state.watchedAllMovies.slice(start, end);
+    
+    if (chunk.length === 0) {
+        state.watchedLoading = false;
         return;
     }
-
-    state.watched = watched;
     
-    const moviesWithDetails = await Promise.all(
-        watched.map(async (w) => {
-            try {
-                const response = await fetch(
-                    `${CONFIG.TMDB_BASE_URL}/movie/${w.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-                );
-                const data = await response.json();
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: data.release_date,
-                    genres: data.genres || []
-                };
-            } catch (e) {
-                return {
-                    id: w.movie_id,
-                    title: w.movie_title,
-                    poster_path: w.movie_poster,
-                    release_date: null,
-                    genres: []
-                };
-            }
-        })
-    );
-
-    state.watchedWithDetails = moviesWithDetails;
+    state.watchedLoading = false;
+    displayMovies(chunk, 'watchedGrid', isLoadMore);
     
-    const allGenres = new Set();
-    moviesWithDetails.forEach(movie => {
-        if (movie.genres && movie.genres.length > 0) {
-            movie.genres.forEach(genre => {
-                allGenres.add(JSON.stringify({id: genre.id, name: genre.name}));
-            });
-        }
-    });
-    
-    const genreSelect = document.getElementById('watchedGenreFilter');
-    genreSelect.innerHTML = '<option value="all">Tous les genres</option>';
-    
-    if (allGenres.size > 0) {
-        Array.from(allGenres)
-            .map(g => JSON.parse(g))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .forEach(genre => {
-                genreSelect.innerHTML += `<option value="${genre.id}">${genre.name}</option>`;
-            });
+    if (!isLoadMore) {
+        setupWatchedFilterListeners();
+        
     }
-
-    applyWatchedFilters();
-    setupWatchedFilterListeners();
+    setupWatchedInfiniteScroll();
 }
+
+function setupWatchedInfiniteScroll() {
+    const grid = document.getElementById('watchedGrid');
+    if (!grid) return;
+    
+    if (state.watchedObserver) {
+        state.watchedObserver.disconnect();
+    }
+    
+    state.watchedObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !state.watchedLoading) {
+            const totalPages = Math.ceil(state.watchedAllMovies.length / MOVIES_PER_PAGE);
+            if (state.watchedPage < totalPages) {
+                console.log('📥 Chargement page', state.watchedPage + 1, '/', totalPages);
+                state.watchedPage++;
+                loadWatched(true);
+            }
+        }
+    }, {
+        rootMargin: '200px',
+        threshold: 0.1
+    });
+
+    const cards = grid.querySelectorAll('.movie-card');
+    const lastCard = cards[cards.length - 1];
+    
+    if (lastCard) {
+        state.watchedObserver.observe(lastCard);
+        console.log('👁️ Observer attaché sur carte', cards.length);
+    }
+}
+
 
 function setupWatchedFilterListeners() {
     const btn = document.getElementById('watchedFiltersBtn');
@@ -461,7 +684,6 @@ function setupWatchedFilterListeners() {
     gridSize.removeEventListener('input', handleWatchedGridSize);
     gridSize.addEventListener('input', handleWatchedGridSize);
 
-    // Recherche en temps réel
     searchInput.removeEventListener('input', applyWatchedFilters);
     searchInput.addEventListener('input', applyWatchedFilters);
 
@@ -584,6 +806,10 @@ function applyWatchedFilters() {
                 return (a.release_date || '9999-12-31').localeCompare(b.release_date || '9999-12-31');
             case 'date-desc':
                 return (b.release_date || '0000-01-01').localeCompare(a.release_date || '0000-01-01');
+            case 'rating-desc':
+                return (b.user_rating || 0) - (a.user_rating || 0);
+            case 'rating-asc':
+                return (a.user_rating || 0) - (b.user_rating || 0);
             case 'added-desc':
             default:
                 return 0;
@@ -745,11 +971,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') {
                 state.isSearchMode = true;
                 state.currentPage = 1;
-                state.movies = []; // On vide la liste actuelle
+                state.movies = [];
                 state.currentSearchQuery = searchInput.value;
-                searchMovies(); // On lance la recherche
-                
-                // Optionnel : fermer le clavier sur mobile
+                searchMovies();
                 searchInput.blur();
             }
         });

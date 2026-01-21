@@ -255,6 +255,64 @@
     transform: scale(1.15);
 }
 
+.modal-star-new {
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* ✅ Étoile complète */
+.modal-star-new.full {
+    color: #fbbf24;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+}
+
+/* ✅ Demi-étoile (avec gradient) */
+.modal-star-new.half {
+    background: linear-gradient(90deg, #fbbf24 50%, rgba(255, 255, 255, 0.2) 50%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.3));
+}
+
+.modal-star-new:hover {
+    transform: scale(1.15);
+}
+
+/* Fix pour éviter la sélection de texte lors du clic */
+.movie-modal-stars {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.modal-star-new {
+    -webkit-touch-callout: none;
+}
+
+.movie-card {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.movie-card:active {
+    transform: none !important;
+}
+
+.movies-grid {
+    -webkit-touch-callout: none;
+}
+
 /* Adaptation responsive pour les étoiles */
 @media (max-width: 480px) {
     .modal-star-new {
@@ -600,3 +658,401 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+/* ==================== ACTOR MODAL - RESPONSIVE ==================== */
+
+.actor-modal-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    background: var(--bg-dark);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Close button */
+.actor-modal-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border: none;
+    color: white;
+    cursor: pointer;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.actor-modal-close:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+/* Header avec backdrop */
+.actor-modal-header {
+    position: relative;
+    height: 160px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.actor-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px);
+    transform: scale(1.1);
+    opacity: 0.3;
+}
+
+.actor-modal-backdrop::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent 0%, var(--bg-dark) 100%);
+}
+
+.actor-modal-header-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 0 20px 16px;
+    height: 100%;
+}
+
+.actor-modal-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--bg-dark);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+    background: var(--bg-card);
+}
+
+.actor-modal-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.actor-modal-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.actor-modal-title h1 {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.actor-modal-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Stats compactes */
+.actor-modal-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.actor-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.actor-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.actor-stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.actor-stat-divider {
+    width: 1px;
+    height: 30px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+/* Biographie */
+.actor-modal-bio {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.actor-modal-bio h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+}
+
+.actor-bio-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+    transition: all 0.3s ease;
+    word-wrap: break-word;
+}
+
+.actor-bio-text.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+}
+
+.actor-bio-toggle {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: opacity 0.3s ease;
+}
+
+.actor-bio-toggle:hover {
+    opacity: 0.8;
+}
+
+/* Filmographie - Plus de scroll séparé */
+.actor-modal-filmography {
+    padding: 20px;
+    padding-bottom: 80px;
+    flex-shrink: 0;
+}
+
+.actor-modal-filmography h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+.filmography-count {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+/* Grille des films - Responsive */
+.actor-films-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.actor-film-card {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.actor-film-card:active {
+    transform: scale(0.95);
+}
+
+.actor-film-poster {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: var(--bg-elevated);
+    overflow: hidden;
+}
+
+.actor-film-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.actor-film-card:hover .actor-film-poster img {
+    transform: scale(1.05);
+}
+
+.actor-film-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 6px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+}
+
+.actor-film-rating {
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+}
+
+.actor-film-info {
+    padding: 8px;
+}
+
+.actor-film-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+}
+
+.actor-film-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Loader pour lazy loading */
+.actor-films-loader {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 0;
+    width: 100%;
+}
+
+.actor-films-loader.visible {
+    display: flex;
+}
+
+
+
+
+
+
+
+/* ==================== LAZY LOADING FILMS SIMILAIRES ==================== */
+
+.similar-movies-loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 0;
+    width: 100%;
+    grid-column: 1 / -1;
+    min-height: 80px;
+}
+
+.similar-movies-loader .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(59, 130, 246, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Ajustement du titre avec compteur */
+.section-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.section-title .filmography-count {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

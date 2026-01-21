@@ -189,7 +189,7 @@ function showInstallScreen() {
             <div class="install-instructions" id="installInstructions">
                 <h4>📖 Instructions d'installation :</h4>
                 <ul>
-                    <li><strong>Chrome/Edge Android :</strong> Appuie sur le menu (⋮) puis "Installer l'application"</li>
+                    <li><strong>Chrome/Edge Android :</strong> Appuie sur le menu (⋮) puis "Installer l'application" ou "ajouter à l'écran d'accueil"</li>
                     <li><strong>Safari iOS :</strong> Appuie sur Partager puis "Sur l'écran d'accueil"</li>
                     <li><strong>Firefox :</strong> Appuie sur le menu puis "Installer"</li>
                 </ul>

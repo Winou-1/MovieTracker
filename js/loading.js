@@ -1,24 +1,13 @@
-// ==================== GESTION DU SPLASH SCREEN ====================
-document.addEventListener('DOMContentLoaded', () => {
-    const splash = document.getElementById('splashScreen');
-    
-    // Masquer après 2.5 secondes OU quand le contenu est chargé
-    const hideSplash = () => {
+setTimeout(() => {
+    const splashScreen = document.getElementById('splashScreen');
+    if (splashScreen) {
+        splashScreen.style.animation = 'splashFadeOut 0.6s ease forwards';
         setTimeout(() => {
-            splash.style.display = 'none';
-        }, 2500);
-    };
-    
-    // Si la page est déjà chargée
-    if (document.readyState === 'complete') {
-        hideSplash();
-    } else {
-        window.addEventListener('load', hideSplash);
+            splashScreen.remove();
+            document.body.style.overflow = '';
+            document.body.style.display = '';
+            document.body.style.alignItems = '';
+            document.body.style.justifyContent = '';
+        }, 1000);
     }
-});
-
-// ==================== FERMER LE BANNER OFFLINE ====================
-function closeOfflineBanner() {
-    const banner = document.getElementById('offlineBanner');
-    banner.classList.remove('show');
-}
+}, 3500);
