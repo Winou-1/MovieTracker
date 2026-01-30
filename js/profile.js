@@ -1,5 +1,3 @@
-// profile.js - Gestion du profil moderne - VERSION COMPLÈTE
-
 let profileData = {
     user: null,
     stats: {},
@@ -14,95 +12,284 @@ let profileData = {
     }
 };
 
-// Initialiser le profil
+// ==================== INITIALISATION ====================
+
 async function initProfile() {
+    console.log('🎬 Init Profile - Début');
+    
     if (!getToken()) {
+        console.log('⚠️ Pas de token, redirection');
         switchView('movies');
         openAuthModal(true);
         return;
     }
 
+    // ✅ D'abord afficher le profil avec les données disponibles
+    renderProfile();
+    console.log('📄 Premier render du profil');
+
     try {
+        // ✅ Charger toutes les données en parallèle
+        console.log('🔄 Chargement des données profil...');
+        
         await Promise.all([
-            loadUserProfile(),
-            loadUserStats(),
-            loadLikedMovies(),
-            loadWatchlistMovies(),
-            loadWatchedMovies()
+            loadUserProfile().catch(err => {
+                console.error('❌ Erreur loadUserProfile:', err);
+                return null;
+            }),
+            loadUserStats().catch(err => {
+                console.error('❌ Erreur loadUserStats:', err);
+                return null;
+            }),
+            loadLikedMovies().catch(err => {
+                console.error('❌ Erreur loadLikedMovies:', err);
+                return [];
+            }),
+            loadWatchlistMovies().catch(err => {
+                console.error('❌ Erreur loadWatchlistMovies:', err);
+                return [];
+            }),
+            loadWatchedMovies().catch(err => {
+                console.error('❌ Erreur loadWatchedMovies:', err);
+                return [];
+            })
         ]);
 
+        console.log('✅ Données chargées:', {
+            user: !!profileData.user,
+            stats: Object.keys(profileData.stats).length,
+            liked: profileData.likedMovies?.length || 0,
+            watchlist: profileData.watchlistMovies?.length || 0,
+            watched: profileData.watchedMovies?.length || 0
+        });
+
+        // ✅ Rafraîchir l'affichage avec toutes les données
         renderProfile();
+        console.log('✅ Profil rechargé avec toutes les données');
+        
     } catch (error) {
-        console.error('Erreur chargement profil:', error);
-        showToast('Erreur de chargement', 'error');
+        console.error('❌ Erreur chargement profil:', error);
+        // ✅ Afficher le profil même en cas d'erreur (mode dégradé)
+        renderProfile();
     }
 }
 
-// Charger les données utilisateur
+// ==================== CHARGEMENT PROFIL ====================
+
 async function loadUserProfile() {
     try {
-        const data = await apiRequest('/profile');
-        profileData.user = data;
-        return data;
+        let data = null;
+        
+        // ✅ CACHE-FIRST
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            data = await OfflineStorage.getProfile();
+            if (data) {
+                console.log('⚡ Profil depuis cache');
+                profileData.user = data;
+                renderProfile();
+            }
+        }
+        
+        // ✅ Sync serveur en parallèle
+        if (navigator.onLine) {
+            try {
+                const freshData = await apiRequest('/profile');
+                
+                if (freshData) {
+                    // Mettre à jour le cache
+                    if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+                        await OfflineStorage.saveToStore('settings', {
+                            key: 'profile',
+                            value: freshData,
+                            updated_at: new Date().toISOString()
+                        });
+                    }
+                    
+                    // Si différent du cache, re-render
+                    if (JSON.stringify(data) !== JSON.stringify(freshData)) {
+                        profileData.user = freshData;
+                        renderProfile();
+                        console.log('🔄 Profil mis à jour depuis serveur');
+                    }
+                }
+            } catch (apiError) {
+                console.warn('⚠️ Erreur API profil, utilisation du cache');
+            }
+        }
+        
+        return profileData.user;
+        
     } catch (error) {
+        console.error('Erreur profil:', error);
         throw error;
     }
 }
 
-// Charger les statistiques
+// ==================== CHARGEMENT STATS ====================
+
 async function loadUserStats() {
     try {
-        const stats = await apiRequest('/stats');
+        let stats = null;
+        let watchedData = null;
         
+        // ✅ CACHE-FIRST
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            watchedData = await OfflineStorage.getWatched();
+            if (watchedData && watchedData.length > 0) {
+                console.log('⚡ Stats depuis cache (' + watchedData.length + ' films vus)');
+            }
+        }
+        
+        // ✅ Sync serveur
+        if (navigator.onLine) {
+            try {
+                const freshStats = await apiRequest('/stats');
+                const freshWatched = await apiRequest('/watched');
+                
+                if (freshStats) stats = freshStats;
+                
+                if (freshWatched && freshWatched.length > 0) {
+                    watchedData = freshWatched;
+                    
+                    // ✅ CORRECTION CRITIQUE : saveListWithDetails au lieu de saveWatchedWithDetails
+                    if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+                        // Ne pas bloquer le chargement, faire en arrière-plan
+                        OfflineStorage.saveListWithDetails('watched', freshWatched).catch(err => {
+                            console.warn('Erreur sauvegarde cache watched:', err);
+                        });
+                    }
+                }
+            } catch (apiError) {
+                console.warn('⚠️ Erreur API stats, calcul local');
+            }
+        }
+        
+        // ✅ Stats en mode offline/fallback
+        if (!stats) {
+            let watchlistData = [];
+            let likesData = [];
+            
+            if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+                watchlistData = await OfflineStorage.getWatchlist() || [];
+                likesData = await OfflineStorage.getLikes() || [];
+            }
+            
+            stats = {
+                rated_count: 0,
+                reviews_count: 0,
+                watchlist_count: watchlistData.length,
+                average_rating: 0
+            };
+        }
+        
+        // ✅ Calcul des stats
         profileData.stats = {
-            rated_count: stats.rated_count || 0,
-            reviews_count: stats.reviews_count || 0,
-            watchlist_count: stats.watchlist_count || 0,
-            average_rating: stats.average_rating || 0
+            rated_count: stats?.rated_count || 0,
+            reviews_count: stats?.reviews_count || 0,
+            watchlist_count: stats?.watchlist_count || 0,
+            average_rating: stats?.average_rating || 0
         };
 
-        const watchedData = await apiRequest('/watched');
-        profileData.stats.watched_count = watchedData.length || 0;
+        profileData.stats.watched_count = watchedData?.length || 0;
 
+        // Films vus ce mois
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        profileData.stats.watched_this_month = watchedData.filter(movie => {
-            const watchedDate = new Date(movie.watched_at);
+        profileData.stats.watched_this_month = (watchedData || []).filter(movie => {
+            const watchedDate = new Date(movie.watched_at || movie.added_at);
             return watchedDate.getMonth() === currentMonth && 
                    watchedDate.getFullYear() === currentYear;
         }).length;
 
+        // Temps total (120min par film)
         profileData.stats.total_hours = Math.round((profileData.stats.watched_count * 120) / 60);
 
         return profileData.stats;
+        
     } catch (error) {
         console.error('Erreur stats:', error);
-        return {};
+        // ✅ Stats par défaut au lieu de crash
+        profileData.stats = {
+            rated_count: 0,
+            reviews_count: 0,
+            watchlist_count: 0,
+            average_rating: 0,
+            watched_count: 0,
+            watched_this_month: 0,
+            total_hours: 0
+        };
+        return profileData.stats;
     }
 }
 
-// Charger les films likés
+// ==================== CHARGEMENT LIKES ====================
+
 async function loadLikedMovies() {
     try {
-        const likes = await apiRequest('/likes/all');
+        let likes = null;
+        
+        // ✅ CACHE-FIRST
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            const cachedLikes = await OfflineStorage.getLikes();
+            if (cachedLikes && cachedLikes.length > 0) {
+                likes = cachedLikes;
+                console.log('⚡ Likes depuis cache (' + likes.length + ')');
+            }
+        }
+        
+        // ✅ Sync serveur
+        if (navigator.onLine) {
+            try {
+                const freshLikes = await apiRequest('/likes/all');
+                if (freshLikes && freshLikes.length > 0) {
+                    likes = freshLikes;
+                    
+                    if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+                        OfflineStorage.saveLikesWithDetails(freshLikes).catch(err => {
+                            console.warn('Erreur cache likes:', err);
+                        });
+                    }
+                }
+            } catch (apiError) {
+                console.warn('⚠️ Erreur API likes');
+            }
+        }
         
         if (!likes || likes.length === 0) {
             profileData.likedMovies = [];
             return [];
         }
 
+        // ✅ Récupérer détails des 6 derniers
         const recentLikes = likes.slice(0, 6);
         const moviesPromises = recentLikes.map(async (like) => {
             try {
-                const response = await fetch(
-                    `${CONFIG.TMDB_BASE_URL}/movie/${like.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
-                );
-                const movie = await response.json();
-                return {
-                    id: movie.id,
-                    title: movie.title,
-                    poster_path: movie.poster_path
-                };
+                // Vérifier cache d'abord
+                if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+                    const cached = await OfflineStorage.getFromStore('movies_cache', like.movie_id);
+                    if (cached && cached.data) {
+                        return {
+                            id: cached.data.id,
+                            title: cached.data.title,
+                            poster_path: cached.data.poster_path
+                        };
+                    }
+                }
+                
+                // Fetch TMDB si en ligne
+                if (navigator.onLine) {
+                    const response = await fetch(
+                        `${CONFIG.TMDB_BASE_URL}/movie/${like.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+                    );
+                    const movie = await response.json();
+                    return {
+                        id: movie.id,
+                        title: movie.title,
+                        poster_path: movie.poster_path
+                    };
+                }
+                
+                return null;
             } catch (error) {
                 return null;
             }
@@ -111,6 +298,7 @@ async function loadLikedMovies() {
         const movies = await Promise.all(moviesPromises);
         profileData.likedMovies = movies.filter(m => m !== null);
         return profileData.likedMovies;
+        
     } catch (error) {
         console.error('Erreur films likés:', error);
         profileData.likedMovies = [];
@@ -118,12 +306,42 @@ async function loadLikedMovies() {
     }
 }
 
-// Charger la watchlist
+// ==================== CHARGEMENT WATCHLIST ====================
+
 async function loadWatchlistMovies() {
     try {
-        const watchlist = await apiRequest('/watchlist');
-        profileData.watchlistMovies = watchlist.slice(0, 6);
+        let watchlist = null;
+        
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            watchlist = await OfflineStorage.getWatchlist();
+            if (watchlist && watchlist.length > 0) {
+                console.log('⚡ Watchlist profil depuis cache');
+            }
+        }
+        
+        if (navigator.onLine) {
+            try {
+                const freshWatchlist = await apiRequest('/watchlist');
+                if (freshWatchlist) {
+                    watchlist = freshWatchlist;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erreur API watchlist');
+            }
+        }
+        
+        if (watchlist && watchlist.length > 0) {
+            profileData.watchlistMovies = watchlist.slice(0, 6).map(w => ({
+                movie_id: w.movie_id,
+                movie_title: w.details?.title || w.movie_title,
+                movie_poster: w.details?.poster_path || w.movie_poster
+            }));
+        } else {
+            profileData.watchlistMovies = [];
+        }
+        
         return profileData.watchlistMovies;
+        
     } catch (error) {
         console.error('Erreur watchlist:', error);
         profileData.watchlistMovies = [];
@@ -131,12 +349,42 @@ async function loadWatchlistMovies() {
     }
 }
 
-// Charger les films vus
+// ==================== CHARGEMENT WATCHED ====================
+
 async function loadWatchedMovies() {
     try {
-        const watched = await apiRequest('/watched');
-        profileData.watchedMovies = watched.slice(0, 6);
+        let watched = null;
+        
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            watched = await OfflineStorage.getWatched();
+            if (watched && watched.length > 0) {
+                console.log('⚡ Watched profil depuis cache');
+            }
+        }
+        
+        if (navigator.onLine) {
+            try {
+                const freshWatched = await apiRequest('/watched');
+                if (freshWatched) {
+                    watched = freshWatched;
+                }
+            } catch (error) {
+                console.warn('⚠️ Erreur API watched');
+            }
+        }
+        
+        if (watched && watched.length > 0) {
+            profileData.watchedMovies = watched.slice(0, 6).map(w => ({
+                movie_id: w.movie_id,
+                movie_title: w.details?.title || w.movie_title,
+                movie_poster: w.details?.poster_path || w.movie_poster
+            }));
+        } else {
+            profileData.watchedMovies = [];
+        }
+        
         return profileData.watchedMovies;
+        
     } catch (error) {
         console.error('Erreur films vus:', error);
         profileData.watchedMovies = [];
@@ -144,13 +392,21 @@ async function loadWatchedMovies() {
     }
 }
 
+
 // Rendre le profil
 function renderProfile() {
     const container = document.querySelector('.profile-content');
     if (!container) return;
 
-    const user = profileData.user;
-    const stats = profileData.stats;
+    // ✅ Vérifier que les données sont chargées
+    const user = profileData.user || {};
+    const stats = profileData.stats || {};
+    
+    // ✅ Valeurs par défaut si données manquantes
+    const username = user.username || state.userProfile?.username || state.user?.username || 'Utilisateur';
+    const email = user.email || state.userProfile?.email || state.user?.email || 'email@exemple.com';
+    const avatar = user.avatar || state.userProfile?.avatar || state.user?.avatar;
+    const friendCode = user.friend_code || state.user?.friend_code || '000000';
 
     container.innerHTML = `
     <div class="profile-header">
@@ -175,75 +431,99 @@ function renderProfile() {
         
         <div class="profile-header-content">
             <div class="profile-avatar-wrapper">
-                <img src="${user.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username) + '&background=2563eb&color=fff&size=200'}" 
-                     alt="${user.username}" 
+                <img src="${avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(username) + '&background=2563eb&color=fff&size=200'}" 
+                     alt="${username}" 
                      class="profile-avatar">
             </div>
             <div class="profile-info">
-                <h2>${user.username}</h2>
-                <p class="profile-email">${user.email}</p>
-                <p style="color:var(--text-muted); font-family:monospace; font-size:1.1em; letter-spacing:2px; margin-top:8px;">#${user.friend_code || '000000'}</p>
+                <h2>${username}</h2>
+                <p class="profile-email">${email}</p>
+                <p style="color:var(--text-muted); font-family:monospace; font-size:1.1em; letter-spacing:2px; margin-top:8px;">#${friendCode}</p>
             </div>
         </div>
     </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <span class="stat-card-icon">🎬</span>
-                    <span class="stat-card-value">${stats.watched_count}</span>
-                </div>
-                <div class="stat-card-label">Films vus</div>
-                <div class="stat-card-sublabel">Au total</div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">🎬</span>
+                <span class="stat-card-value">${stats.watched_count || 0}</span>
             </div>
-            
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <span class="stat-card-icon">📅</span>
-                    <span class="stat-card-value">${stats.watched_this_month}</span>
-                </div>
-                <div class="stat-card-label">Ce mois</div>
-                <div class="stat-card-sublabel">${new Date().toLocaleDateString('fr-FR', { month: 'long' })}</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <span class="stat-card-icon">⏱️</span>
-                    <span class="stat-card-value">${stats.total_hours}h</span>
-                </div>
-                <div class="stat-card-label">Temps total</div>
-                <div class="stat-card-sublabel">Visionnage</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-card-header">
-                    <span class="stat-card-icon">⭐</span>
-                    <span class="stat-card-value">${stats.average_rating}</span>
-                </div>
-                <div class="stat-card-label">Note moy.</div>
-                <div class="stat-card-sublabel">${stats.rated_count} notes</div>
-            </div>
+            <div class="stat-card-label">Films vus</div>
+            <div class="stat-card-sublabel">Au total</div>
         </div>
-
-        <div class="stats-inline">
-            <div class="stat-inline-item">
-                <div class="stat-inline-value">${stats.reviews_count || 0}</div>
-                <div class="stat-inline-label">Avis</div>
+        
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">📅</span>
+                <span class="stat-card-value">${stats.watched_this_month || 0}</span>
             </div>
-            <div class="stat-inline-item">
-                <div class="stat-inline-value">${profileData.likedMovies.length}</div>
-                <div class="stat-inline-label">Favoris</div>
-            </div>
-            <div class="stat-inline-item">
-                <div class="stat-inline-value">${stats.watchlist_count}</div>
-                <div class="stat-inline-label">À voir</div>
-            </div>
+            <div class="stat-card-label">Ce mois</div>
+            <div class="stat-card-sublabel">${new Date().toLocaleDateString('fr-FR', { month: 'long' })}</div>
         </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">⏱️</span>
+                <span class="stat-card-value">${stats.total_hours || 0}h</span>
+            </div>
+            <div class="stat-card-label">Temps total</div>
+            <div class="stat-card-sublabel">Visionnage</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">⭐</span>
+                <span class="stat-card-value">${stats.average_rating || 0}</span>
+            </div>
+            <div class="stat-card-label">Note moy.</div>
+            <div class="stat-card-sublabel">${stats.rated_count || 0} notes</div>
+        </div>
+    </div>
 
-        ${renderMoviesSection('❤️ Films aimés', profileData.likedMovies, 'liked')}
-        ${renderMoviesSection('📖 À voir', profileData.watchlistMovies, 'watchlist')}
-        ${renderMoviesSection('👁️ Vus récemment', profileData.watchedMovies, 'watched')}
+    <div class="stats-inline">
+        <div class="stat-inline-item">
+            <div class="stat-inline-value">${stats.reviews_count || 0}</div>
+            <div class="stat-inline-label">Avis</div>
+        </div>
+        <div class="stat-inline-item">
+            <div class="stat-inline-value">${profileData.likedMovies?.length || 0}</div>
+            <div class="stat-inline-label">Favoris</div>
+        </div>
+        <div class="stat-inline-item">
+            <div class="stat-inline-value">${stats.watchlist_count || 0}</div>
+            <div class="stat-inline-label">À voir</div>
+        </div>
+    </div>
+    <div class="profile-stats-button-container" style="padding: 0 16px; margin-bottom: 24px;">
+        <button onclick="switchView('stats')" style="
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'">
+            <span style="font-size: 24px;">📊</span>
+            Voir mes statistiques détaillées
+        </button>
+    </div>
+
+
+    ${renderMoviesSection('❤️ Films aimés', profileData.likedMovies, 'liked')}
+    ${renderMoviesSection('📖 À voir', profileData.watchlistMovies, 'watchlist')}
+    ${renderMoviesSection('👁️ Vus récemment', profileData.watchedMovies, 'watched')}
     `;
+    
     loadFriendsCount();
     createSettingsModal();
 }
@@ -263,7 +543,10 @@ async function loadFriendsCount() {
 }
 // Rendre une section de films
 function renderMoviesSection(title, movies, type) {
-    if (!movies || movies.length === 0) {
+    // ✅ Vérifier que movies existe et est un tableau
+    const moviesList = Array.isArray(movies) ? movies : [];
+    
+    if (moviesList.length === 0) {
         return `
             <div class="profile-section">
                 <div class="section-header">
@@ -296,14 +579,19 @@ function renderMoviesSection(title, movies, type) {
                 </a>
             </div>
             <div class="movies-horizontal-scroll">
-                ${movies.map(movie => `
-                    <div class="movie-mini-card" onclick="showMovieDetails(${movie.movie_id || movie.id})">
-                        <img src="${movie.movie_poster ? CONFIG.TMDB_IMG_URL + movie.movie_poster : (movie.poster_path ? CONFIG.TMDB_IMG_URL + movie.poster_path : '')}" 
-                             alt="${movie.movie_title || movie.title}" 
-                             class="movie-mini-poster">
-                        <div class="movie-mini-title">${movie.movie_title || movie.title}</div>
-                    </div>
-                `).join('')}
+                ${moviesList.map(movie => {
+                    const movieId = movie.movie_id || movie.id;
+                    const movieTitle = movie.movie_title || movie.title || 'Film';
+                    const moviePoster = movie.movie_poster || movie.poster_path;
+                    const posterUrl = moviePoster ? (moviePoster.startsWith('http') ? moviePoster : CONFIG.TMDB_IMG_URL + moviePoster) : '';
+                    
+                    return `
+                        <div class="movie-mini-card" onclick="showMovieDetails(${movieId})">
+                            ${posterUrl ? `<img src="${posterUrl}" alt="${movieTitle}" class="movie-mini-poster">` : '<div class="movie-mini-poster" style="background:#374151;display:flex;align-items:center;justify-content:center;">🎬</div>'}
+                            <div class="movie-mini-title">${movieTitle}</div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         </div>
     `;
@@ -429,6 +717,69 @@ function createSettingsModal() {
                         </svg>
                     </div>
                 </div>
+                <div class="settings-option settings-toggle">
+                        <div class="settings-option-header">
+                            <div class="settings-option-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                                </svg>
+                            </div>
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">Notifications</div>
+                                <div class="settings-option-value">Recevoir les alertes</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch ${profileData.settings.notifications ? 'active' : ''}" 
+                             onclick="toggleSetting('notifications', this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="settings-option settings-toggle">
+                        <div class="settings-option-header">
+                            <div class="settings-option-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                                </svg>
+                            </div>
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">Mode Offline</div>
+                                <div class="settings-option-value" id="offlineModeValue">Données en local</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch ${typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled() ? 'active' : ''}" 
+                             id="offlineModeToggle"
+                             onclick="toggleOfflineMode(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="settings-option" id="setting-offline-info" style="cursor: default;">
+                        <div class="settings-option-header">
+                            <div class="settings-option-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="16" x2="12" y2="12"/>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                            </div>
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">Cache</div>
+                                <div class="settings-option-value" id="cacheSize">Calcul...</div>
+                            </div>
+                        </div>
+                        <button class="btn-secondary btn-small" onclick="manualSync()" style="padding: 6px 12px; font-size: 12px;">
+                            🔄 Sync
+                        </button>
+                        <button class="btn-secondary btn-small" onclick="resetOfflineStorage()" 
+                                style="padding: 6px 12px; font-size: 12px; background: #ef4444; color: white; margin-left: 8px;">
+                            🗑️ Reset
+                        </button>
+                    </div>
+                    
                 <div class="settings-section">
                     <div class="settings-section-title">Préférences</div>
                     
@@ -500,10 +851,32 @@ function createSettingsModal() {
             </div>
         </div>
     `;
+    setTimeout(async () => {
+        // Vérifier que OfflineStorage existe avant de l'utiliser
+        if (typeof OfflineStorage !== 'undefined') {
+            const cacheSize = await OfflineStorage.getCacheSize();
+            const cacheSizeElement = document.getElementById('cacheSize');
+            if (cacheSizeElement) {
+                cacheSizeElement.textContent = cacheSize;
+            }
+        }
+    }, 100);
 
     document.body.appendChild(modal);
     setupSettingsEvents();
+    
+    // Charger la taille du cache après un court délai
+    setTimeout(async () => {
+        if (typeof OfflineStorage !== 'undefined') {
+            const cacheSize = await OfflineStorage.getCacheSize();
+            const cacheSizeElement = document.getElementById('cacheSize');
+            if (cacheSizeElement) {
+                cacheSizeElement.textContent = cacheSize;
+            }
+        }
+    }, 200);
 }
+
 
 function setupSettingsEvents() {
     document.getElementById('setting-avatar')?.addEventListener('click', () => editAvatar());
@@ -909,3 +1282,184 @@ if (document.readyState === 'loading') {
 } else {
     initProfile();
 }
+// ✅ REMPLACER LA FONCTION manualSync dans profile.js
+
+async function manualSync() {
+    // Vérifier que OfflineStorage existe
+    if (typeof OfflineStorage === 'undefined') {
+        showToast('Service de synchronisation non disponible', 'error');
+        return;
+    }
+    
+    if (!OfflineStorage.isEnabled()) {
+        showToast('Mode offline désactivé', 'error');
+        return;
+    }
+    
+    console.log('🔄 DÉBUT SYNCHRONISATION MANUELLE');
+    showToast('Synchronisation en cours...', 'info');
+    
+    try {
+        // S'assurer que la DB est initialisée
+        await OfflineStorage.init();
+        console.log('✅ DB initialisée');
+        
+        await OfflineStorage.syncAllData();
+        console.log('✅ syncAllData terminé');
+        
+        // Mettre à jour l'affichage de la taille du cache
+        const cacheSize = await OfflineStorage.getCacheSize();
+        console.log('📊 Taille cache:', cacheSize);
+        
+        const cacheSizeElement = document.getElementById('cacheSize');
+        if (cacheSizeElement) {
+            cacheSizeElement.textContent = cacheSize;
+        }
+        
+        showToast('✅ Données synchronisées !', 'success');
+        
+        // Recharger la page pour voir les changements
+        setTimeout(() => {
+            if (state.currentView === 'profile') {
+                initProfile();
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erreur sync complète:', error);
+        console.error('Stack:', error.stack);      
+        // Si erreur liée aux stores
+        if (error.name === 'NotFoundError' || 
+            (error.message && error.message.includes('object store'))) {
+            
+            const shouldReset = confirm(
+                '⚠️ La base de données semble corrompue.\n\n' +
+                'Voulez-vous la réinitialiser ?\n' +
+                '(Vos données sur le serveur seront conservées)'
+            );
+            
+            if (shouldReset) {
+                try {
+                    showToast('Réinitialisation en cours...', 'info');
+                    await OfflineStorage.resetDatabase();
+                    showToast('✅ Base réinitialisée !', 'success');
+                    
+                    // Relancer la synchro après 2 secondes
+                    setTimeout(async () => {
+                        showToast('Synchronisation des données...', 'info');
+                        await OfflineStorage.syncAllData();
+                        showToast('✅ Synchronisation terminée !', 'success');
+                        
+                        // Recharger le profil
+                        if (state.currentView === 'profile') {
+                            await initProfile();
+                        }
+                    }, 2000);
+                    
+                } catch (resetError) {
+                    console.error('❌ Erreur reset:', resetError);
+                    showToast('Impossible de réinitialiser. Rechargez la page.', 'error');
+                }
+            }
+        } else {
+            showToast('Erreur lors de la synchronisation', 'error');
+        }
+    }
+}
+
+// Rendre la fonction accessible globalement
+window.manualSync = manualSync;
+
+// ✅ AJOUTER AUSSI : Fonction pour réinitialiser manuellement depuis les settings
+async function resetOfflineStorage() {
+    if (typeof OfflineStorage === 'undefined') {
+        showToast('Service non disponible', 'error');
+        return;
+    }
+    
+    const confirmed = confirm(
+        '⚠️ ATTENTION ⚠️\n\n' +
+        'Cela va supprimer TOUTES les données en cache local.\n' +
+        'Vos données sur le serveur seront conservées.\n\n' +
+        'Continuer ?'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        showToast('Réinitialisation...', 'info');
+        console.log('🗑️ Début du reset...');
+        
+        await OfflineStorage.resetDatabase();
+        
+        console.log('✅ Reset terminé');
+        showToast('✅ Cache réinitialisé !', 'success');
+        
+        // Mettre à jour l'affichage
+        const cacheSizeElement = document.getElementById('cacheSize');
+        if (cacheSizeElement) {
+            const newSize = await OfflineStorage.getCacheSize();
+            cacheSizeElement.textContent = newSize;
+        }
+        
+        // Proposer de resynchroniser
+        setTimeout(() => {
+            const shouldSync = confirm(
+                '✅ Cache réinitialisé avec succès.\n\n' +
+                'Voulez-vous synchroniser vos données maintenant ?'
+            );
+            
+            if (shouldSync) {
+                manualSync();
+            }
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Erreur reset:', error);
+        showToast('Erreur lors de la réinitialisation', 'error');
+        
+        // Si c'est bloqué, proposer de recharger la page
+        if (error.message && error.message.includes('blocked')) {
+            const shouldReload = confirm(
+                '⚠️ La réinitialisation est bloquée.\n\n' +
+                'Fermez tous les autres onglets de l\'application,\n' +
+                'puis rechargez cette page.\n\n' +
+                'Recharger maintenant ?'
+            );
+            
+            if (shouldReload) {
+                window.location.reload();
+            }
+        }
+    }
+}
+
+window.resetOfflineStorage = resetOfflineStorage;
+
+
+// Fonction toggle pour le mode offline
+function toggleOfflineMode(toggleElement) {
+    if (typeof OfflineStorage === 'undefined') {
+        showToast('Service offline non disponible', 'error');
+        return;
+    }
+    
+    const isCurrentlyEnabled = OfflineStorage.isEnabled();
+    const newState = !isCurrentlyEnabled;
+    
+    OfflineStorage.setEnabled(newState);
+    toggleElement.classList.toggle('active', newState);
+    
+    const valueDisplay = document.getElementById('offlineModeValue');
+    if (valueDisplay) {
+        valueDisplay.textContent = newState ? 'Données en local' : 'Désactivé';
+    }
+    
+    if (newState) {
+        showToast('Mode offline activé - Synchronisation...', 'info');
+    } else {
+        showToast('Mode offline désactivé', 'info');
+    }
+}
+
+window.toggleOfflineMode = toggleOfflineMode;

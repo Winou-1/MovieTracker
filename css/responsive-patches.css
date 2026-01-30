@@ -1,0 +1,306 @@
+/* ==================== PATCH CSS - Étoiles responsives ==================== */
+
+/* ✅ Forcer les 10 étoiles sur une seule ligne - Responsive */
+.movie-modal-stars {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: nowrap !important; /* Jamais de retour à la ligne */
+    overflow-x: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-star-new {
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+/* Responsive - Réduire progressivement la taille */
+@media (max-width: 768px) {
+    .modal-star-new {
+        font-size: 28px;
+    }
+    
+    .movie-modal-stars {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-star-new {
+        font-size: 24px;
+    }
+    
+    .movie-modal-stars {
+        gap: 2px;
+    }
+}
+
+@media (max-width: 400px) {
+    .modal-star-new {
+        font-size: 22px;
+    }
+    
+    .movie-modal-stars {
+        gap: 2px;
+    }
+}
+
+@media (max-width: 360px) {
+    .modal-star-new {
+        font-size: 20px;
+    }
+    
+    .movie-modal-stars {
+        gap: 1px;
+    }
+}
+
+@media (max-width: 320px) {
+    .modal-star-new {
+        font-size: 18px;
+    }
+    
+    .movie-modal-stars {
+        gap: 1px;
+    }
+}
+
+/* ==================== PATCH CSS - Mobile Nav Améliorée ==================== */
+
+/* ✅ Navigation mobile - Espacement égal et responsive */
+.mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 480px;
+    width: calc(100% - 24px);
+    background: rgba(20, 24, 28, 0.92);
+    backdrop-filter: blur(28px) saturate(180%);
+    border-radius: 32px;
+    padding: 6px;
+    z-index: 100;
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+        0 24px 72px rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mobile-nav-item {
+    /* ✅ Flex égal pour tous les items */
+    flex: 1;
+    min-width: 0; /* Permet le shrink */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    cursor: pointer;
+    border-radius: 24px;
+    min-height: 64px;
+    padding: 6px 4px;
+}
+
+.mobile-nav-item::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(147, 197, 253, 0.18));
+    border-radius: 24px;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: -1;
+}
+
+.mobile-nav-item.active::before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.mobile-nav-item.active {
+    color: #fff;
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+    transform: translateY(-10px) scale(0.92);
+    filter: drop-shadow(0 8px 20px rgba(59, 130, 246, 0.8));
+}
+
+.mobile-nav-icon {
+    /* ✅ Taille responsive de l'icône */
+    font-size: clamp(22px, 5vw, 26px);
+    margin-bottom: 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+}
+
+.mobile-nav-item:not(.active) .mobile-nav-icon {
+    transform: translateY(0) scale(1);
+}
+
+.mobile-nav-item:active .mobile-nav-icon {
+    transform: scale(0.82);
+}
+
+.mobile-nav-label {
+    /* ✅ Label responsive et sur une ligne max */
+    font-size: clamp(8px, 1.8vw, 9px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-top: 2px;
+    position: absolute;
+    bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%; /* Évite le débordement */
+    text-align: center;
+}
+
+.mobile-nav-item.active .mobile-nav-label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Animation ripple au clic */
+@keyframes ripple {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+    }
+}
+
+.mobile-nav-item::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mobile-nav-item:active::after {
+    animation: ripple 0.7s ease-out;
+}
+
+/* ✅ Adaptation pour petits écrans */
+@media (max-width: 400px) {
+    .mobile-nav {
+        width: calc(100% - 16px);
+        padding: 4px;
+        border-radius: 28px;
+    }
+    
+    .mobile-nav-item {
+        min-height: 58px;
+        padding: 4px 2px;
+    }
+    
+    .mobile-nav-icon {
+        font-size: 20px;
+        height: 28px;
+    }
+    
+    .mobile-nav-label {
+        font-size: 7px;
+        letter-spacing: 0.2px;
+        bottom: 6px;
+    }
+}
+
+@media (max-width: 360px) {
+    .mobile-nav {
+        width: calc(100% - 12px);
+        padding: 3px;
+    }
+    
+    .mobile-nav-item {
+        min-height: 54px;
+        padding: 3px 1px;
+    }
+    
+    .mobile-nav-icon {
+        font-size: 18px;
+        height: 26px;
+    }
+    
+    .mobile-nav-label {
+        font-size: 6px;
+        bottom: 5px;
+    }
+}
+
+/* ✅ Très petits écrans (320px et moins) */
+@media (max-width: 320px) {
+    .mobile-nav {
+        width: calc(100% - 8px);
+        padding: 2px;
+        border-radius: 24px;
+    }
+    
+    .mobile-nav-item {
+        min-height: 50px;
+        padding: 2px 1px;
+    }
+    
+    .mobile-nav-icon {
+        font-size: 16px;
+        height: 24px;
+    }
+    
+    .mobile-nav-label {
+        font-size: 6px;
+        bottom: 4px;
+        max-width: 95%;
+    }
+}
+
+/* ==================== PATCH - Filtre contenu adulte ==================== */
+
+/* Ce filtre sera appliqué côté API, mais on peut ajouter un indicateur visuel */
+.movie-card.filtered {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.movie-card.filtered::after {
+    content: '18+';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+}

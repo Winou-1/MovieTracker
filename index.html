@@ -7,9 +7,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>CineTrack</title>
 
-    <!-- Cropper.js for Avatar Cropping -->
+    <!-- autre -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#667eea">
@@ -32,28 +33,42 @@
     <link rel="stylesheet" href="css/friends.css">
     <link rel="stylesheet" href="css/friend-profile-modal.css">
     <link rel="stylesheet" href="css/loading-offline.css">
+    <link rel="stylesheet" href="css/offline-intro.css">
+    <link rel="stylesheet" href="css/stats.css">
+    <link rel="stylesheet" href="css/responsive-patches.css">
 
-    <!-- JavaScript - ORDRE IMPORTANT -->    
-     <script src="js/install-guard.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/forgot-password.js"></script>
-    <!--<script src="js/offline-cache.js"></script>--> 
-    <script src="js/auth.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/swiper.js"></script>
-    <script src="js/movies.js"></script>
-    <script src="js/profile.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/modal-movie.js"></script>
-    <script src="js/language.js"></script>
-    <script src="js/friends.js"></script>
-    <script src="js/loading.js"></script>
-    
+    <!-- JavaScript - ORDRE IMPORTANT + DEFER -->    
+    <script defer src="js/install-guard.js"></script>
+    <script defer src="js/config.js"></script>
+    <script defer src="js/forgot-password.js"></script>
+    <script defer src="js/offline-storage.js"></script>
+    <script defer src="js/offline-intro.js"></script>
+    <script defer src="js/auth.js"></script>
+
+    <script defer src="js/swiper.js"></script>
+    <script defer src="js/movies.js"></script>
+    <script defer src="js/ui.js"></script>
+
+    <script defer src="js/stats.js"></script>
+    <script defer src="js/toast-system.js"></script>
+    <script defer src="js/adult-content-filter.js"></script>
+
+    <script defer src="js/profile.js"></script>
+    <script defer src="js/main.js"></script>
+    <script defer src="js/modal-movie.js"></script>
+    <script defer src="js/language.js"></script>
+    <script defer src="js/friends.js"></script>
+    <script defer src="js/loading.js"></script>
+    <script defer src="js/register-sw.js"></script>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
 </head>
 <body>
+<div id="offlineIndicator" style="display: none; position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+    📡 Mode Offline
+</div>
+
     <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
         <!-- Rayons de lumière -->
@@ -196,11 +211,15 @@
                             <div class="filter-group">
                                 <label>Trier par :</label>
                                 <select id="watchlistSortBy" class="filter-select">
+                                    <option value="added-desc">Récemment ajouté</option>
                                     <option value="title-asc">Titre (A → Z)</option>
                                     <option value="title-desc">Titre (Z → A)</option>
                                     <option value="date-asc">Date de sortie (croissant)</option>
                                     <option value="date-desc">Date de sortie (décroissant)</option>
-                                    <option value="added-desc">Récemment ajouté</option>
+                                    <option value="runtime-desc">⏱️ Durée (long → court)</option>
+                                    <option value="runtime-asc">⏱️ Durée (court → long)</option>
+                                    <option value="tmdb-rating-desc">🎬 Note TMDB (10 -> 0)</option>
+                                    <option value="tmdb-rating-asc">🎬 Note TMDB (0 -> 10)</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -257,13 +276,17 @@
                             <div class="filter-group">
                                 <label>Trier par :</label>
                                 <select id="watchedSortBy" class="filter-select">
+                                    <option value="added-desc">Récemment ajouté</option>
                                     <option value="title-asc">Titre (A → Z)</option>
                                     <option value="title-desc">Titre (Z → A)</option>
                                     <option value="date-asc">Date de sortie (croissant)</option>
                                     <option value="date-desc">Date de sortie (décroissant)</option>
-                                    <option value="added-desc">Récemment ajouté</option>
-                                    <option value="rating-desc">Note (meilleure d'abord)</option>
-                                    <option value="rating-asc">Note (moins bonne d'abord)</option>
+                                    <option value="user-rating-desc">⭐ Ma note (10 -> 0)</option>
+                                    <option value="user-rating-asc">⭐ Ma note (0 -> 10)</option>
+                                    <option value="runtime-desc">⏱️ Durée (long → court)</option>
+                                    <option value="runtime-asc">⏱️ Durée (court → long)</option>
+                                    <option value="tmdb-rating-desc">🎬 Note TMDB (10 -> 0)</option>
+                                    <option value="tmdb-rating-asc">🎬 Note TMDB (0 -> 10)</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -318,7 +341,7 @@
                         </div>
                         <div class="profile-info">
                             <h2 id="profileUsername">Utilisateur</h2>
-                            <p class="profile-email" id="profileEmail">email@example.com</p>
+                            <p class="profile-email" id="profileEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e7828a868e8ba7829f868a978b82c984888a">[email&#160;protected]</a></p>
                             <h2 id="usernameDisplay">Pseudo</h2>
                             <p id="friendCodeDisplay" style="color:var(--text-muted); font-family:monospace; font-size:1.2em; letter-spacing:2px; margin-top:5px;">#000000</p>
                             <div class="profile-actions">
@@ -360,6 +383,13 @@
         <div class="container"></div>
     </section>
 
+    <!-- ==================== STATS SECTION ==================== -->
+    <section id="statsSection" style="display: none;">
+        <div class="container">
+            <div id="statsContainer"></div>
+        </div>
+    </section>
+
     <!-- Navigation Mobile -->
     <nav class="mobile-nav">
         <a class="mobile-nav-item active" id="mobileNavFilms">
@@ -370,13 +400,13 @@
             <div class="mobile-nav-icon">🔥</div>
             <div class="mobile-nav-label">Découvrir</div>
         </a>
-        <a class="mobile-nav-item" id="mobileNavWatchlist">
-            <div class="mobile-nav-icon">📌</div>
-            <div class="mobile-nav-label">Watchlist</div>
-        </a>
         <a class="mobile-nav-item" id="mobileNavWatched">
             <div class="mobile-nav-icon">✓</div>
             <div class="mobile-nav-label">Vus</div>
+        </a>
+        <a class="mobile-nav-item" id="mobileNavWatchlist">
+            <div class="mobile-nav-icon">📌</div>
+            <div class="mobile-nav-label">Watchlist</div>
         </a>
         <a class="mobile-nav-item" id="mobileNavProfile">
             <div class="mobile-nav-icon">👤</div>
@@ -449,30 +479,17 @@
 
     <!-- Modal Cropper Avatar -->
     <div id="cropperModal" class="modal">
-    <div class="modal-content">
-        <div class="cropper-container-wrapper">
-            <img id="imageToCrop" alt="Image à recadrer">
-        </div>
-        
-        <div class="cropper-footer">
-            <button id="cancelCropBtn" class="btn-secondary">Annuler</button>
-            <button id="cropAndSaveBtn" class="btn">Valider</button>
+        <div class="modal-content">
+            <div class="cropper-container-wrapper">
+                <img id="imageToCrop" alt="Image à recadrer">
+            </div>
+            
+            <div class="cropper-footer">
+                <button id="cancelCropBtn" class="btn-secondary">Annuler</button>
+                <button id="cropAndSaveBtn" class="btn">Valider</button>
+            </div>
         </div>
     </div>
 
-    <div id="friendsInteractionModal" class="friends-interaction-modal">
-    <div class="friends-interaction-modal-content">
-        <span class="friends-interaction-modal-close">&times;</span>
-        <h3>Amis ayant interagi avec ce film</h3>
-        <div id="friendsInteractionList" class="friends-interaction-list">
-            <!-- Les amis seront ajoutés ici dynamiquement -->
-        </div>
-    </div>
-</div>
-
-</div>
-</div>
-</div>
 </body>
-
 </html>

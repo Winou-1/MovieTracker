@@ -545,7 +545,7 @@ export const handler = async (event) => {
     // GET /watched
     if (path === '/watched' && method === 'GET') {
       const watched = await sql`
-        SELECT movie_id, movie_title, movie_poster, watched_at 
+        SELECT movie_id, movie_id, movie_title, movie_poster, watched_at, rating 
         FROM watched 
         WHERE user_id = ${user.userId}
         ORDER BY watched_at DESC

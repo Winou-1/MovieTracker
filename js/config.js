@@ -10,8 +10,8 @@ const state = {
     user: null,
     token: null,
     movies: [],
-    watchlist: [],
-    watched: [],
+    watchlist: [],  // ✅ S'assurer que c'est un tableau
+    watched: [],    // ✅ S'assurer que c'est un tableau
     currentView: 'movies',
     swiperMovies: [],
     swiperIndex: 0,
@@ -24,7 +24,16 @@ const state = {
         avatar: null,
         username: '',
         email: ''
-    }
+    },
+    // ✅ AJOUT : Variables pour éviter le chargement infini
+    watchlistLoading: false,
+    watchlistPage: 1,
+    watchlistAllMovies: [],
+    watchlistWithDetails: [],
+    watchedLoading: false,
+    watchedPage: 1,
+    watchedAllMovies: [],
+    watchedWithDetails: []
 };
 
 // UTILS
@@ -83,6 +92,14 @@ async function apiRequest(endpoint, options = {}) {
         return await response.json();
     } catch (error) {
         console.error('API Error:', error);
+        
+        // ✅ Si erreur réseau et mode offline activé, ne pas afficher d'erreur
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled() && navigator.onLine) {
+            // ✅ ATTENDRE la fin de la synchro
+            await OfflineStorage.syncAllData();
+            console.log('✅ Synchronisation terminée dans loadUserData');
+        }
+        
         return null;
     }
 }

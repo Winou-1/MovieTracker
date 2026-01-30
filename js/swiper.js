@@ -28,6 +28,39 @@ if (!state.seenMovieIds) {
     state.seenMovieIds = new Set();
 }
 
+// ✅ CORRECTION : Désactivation temporaire de la fonctionnalité "amis qui ont vu le film"
+// Cette fonction sera réactivée une fois l'endpoint backend créé
+async function getFriendsWhoLikedMovie(movieId) {
+    // ❌ TEMPORAIREMENT DÉSACTIVÉ - endpoint /movies/{id}/friends-activity non disponible
+    // Retourner un tableau vide pour éviter les erreurs 404
+    console.log(`ℹ️ getFriendsWhoLikedMovie désactivé pour le film ${movieId}`);
+    return [];
+    
+    /* 📝 CODE ORIGINAL À RÉACTIVER PLUS TARD :
+    if (!getToken()) return [];
+    
+    try {
+        const response = await apiRequest(`/movies/${movieId}/friends-activity`);
+        if (response && response.friends) {
+            // Filtrer uniquement ceux qui ont vu (watched) le film
+            return response.friends.filter(f => f.watched);
+        }
+        return [];
+    } catch (error) {
+        console.error('Erreur récupération amis:', error);
+        return [];
+    }
+    */
+}
+
+function formatRuntime(minutes) {
+    if (!minutes) return '';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}min`;
+    return `${hours}h${mins > 0 ? ` ${mins}min` : ''}`;
+}
+
 async function loadSwiperMovies() {
     if (!getToken()) {
         document.getElementById('swiperContainer').innerHTML = `
@@ -500,7 +533,7 @@ function getGenreName(genreId) {
 // UI ET INTERACTIONS (inchangées)
 // ============================================
 
-function displaySwiperMovie() {
+async function displaySwiperMovie() {
     const container = document.getElementById('swiperContainer');
     const currentMovie = state.swiperMovies[state.swiperIndex];
     const nextMovie = state.swiperMovies[state.swiperIndex + 1];
@@ -513,6 +546,23 @@ function displaySwiperMovie() {
     const poster = currentMovie.poster_path ? `${CONFIG.TMDB_IMG_URL}${currentMovie.poster_path}` : 'placeholder.jpg';
     const backdrop = currentMovie.backdrop_path ? `${CONFIG.TMDB_IMG_URL}${currentMovie.backdrop_path}` : poster;
     const year = currentMovie.release_date ? currentMovie.release_date.split('-')[0] : '';
+    
+    // ✅ NOUVEAU : Récupérer les détails du film pour avoir la durée et la note
+    let movieDetails = null;
+    try {
+        const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${currentMovie.id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
+        if (response.ok) {
+            movieDetails = await response.json();
+        }
+    } catch (error) {
+        console.error('Erreur chargement détails film:', error);
+    }
+    
+    const runtime = movieDetails ? formatRuntime(movieDetails.runtime) : '';
+    const rating = currentMovie.vote_average ? currentMovie.vote_average.toFixed(1) : '';
+    
+    // ✅ NOUVEAU : Récupérer les amis qui ont aimé le film
+    const friendsWhoLiked = await getFriendsWhoLikedMovie(currentMovie.id);
 
     let nextMovieHTML = '';
     if (nextMovie) {
@@ -534,10 +584,42 @@ function displaySwiperMovie() {
             </div>
         `;
     }
+    
+    // ✅ NOUVEAU : Pastilles des amis
+    let friendsBadgesHTML = '';
+    if (friendsWhoLiked.length > 0) {
+        const visibleFriends = friendsWhoLiked.slice(0, 3); // Max 3 pastilles visibles
+        const remaining = friendsWhoLiked.length - visibleFriends.length;
+        
+        friendsBadgesHTML = `
+            <div class="swiper-friends-badges">
+                ${visibleFriends.map((friend, index) => `
+                    <div class="swiper-friend-badge" style="z-index: ${10 - index};" title="${friend.username} a vu ce film">
+                        ${friend.avatar 
+                            ? `<img src="${friend.avatar}" alt="${friend.username}">` 
+                            : `<div class="swiper-friend-placeholder">${friend.username.charAt(0).toUpperCase()}</div>`
+                        }
+                    </div>
+                `).join('')}
+                ${remaining > 0 ? `
+                    <div class="swiper-friend-badge more" title="+${remaining} ami(s)">
+                        <div class="swiper-friend-placeholder">+${remaining}</div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
 
     container.innerHTML = `
         <div class="swiper-backdrop" id="swiperBackdrop" style="background-image: url('${backdrop}')"></div>
         <div class="swiper-close" onclick="switchView('movies')">×</div>
+        <button class="swiper-help-btn" onclick="showSwiperHelpModal()" title="Comment utiliser le swiper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+        </button>
         
         <div class="swiper-card-stack">
             ${nextMovieHTML}
@@ -549,11 +631,21 @@ function displaySwiperMovie() {
                 <div class="swiper-card-inner">
                     <div class="swiper-header">
                         <h2 class="swiper-title-modern">${currentMovie.title}</h2>
-                        <div class="swiper-year-modern">${year}</div>
+                        <!-- <div class="swiper-year-modern">${year}</div>
+                        
+                        ✅ NOUVEAU : Infos du film -->
+                        <div class="swiper-movie-info">
+                            ${year ? `<span class="swiper-info-item">📅 ${year}</span>` : ''}
+                            ${runtime ? `<span class="swiper-info-item">⏱️ ${runtime}</span>` : ''}
+                            ${rating ? `<span class="swiper-info-item">⭐ ${rating}/10</span>` : ''}
+                        </div>
                     </div>
                     <div class="swiper-poster-container" id="posterContainer">
                         <div class="swiper-poster-modern">
                             <img src="${poster}" alt="${currentMovie.title}">
+                            
+                            <!-- ✅ NOUVEAU : Pastilles des amis -->
+                            ${friendsBadgesHTML}
                         </div>
                         <div class="swipe-overlay left">
                             <div>WATCHLIST</div>
@@ -673,7 +765,19 @@ function setupTinderSwipe() {
         if (!hasMoved && clickDuration < 300) {
             const movieId = parseInt(card.dataset.movieId);
             showMovieDetails(movieId);
-            card.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+            
+            // ✅ CORRECTION : Détecter mobile et utiliser le bon transform
+            const isMobile = window.innerWidth <= 768;
+            card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            
+            if (isMobile) {
+                // Sur mobile : pas de translate, juste reset à 0,0
+                card.style.transform = 'translate(0, 0) rotate(0deg)';
+            } else {
+                // Sur desktop : centrage avec -50%
+                card.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+            }
+            
             backdrop.style.opacity = '0.4';
             overlayLeft.style.opacity = '0';
             overlayRight.style.opacity = '0';
@@ -681,6 +785,11 @@ function setupTinderSwipe() {
             overlayLeft.classList.remove('active');
             overlayRight.classList.remove('active');
             overlayUp.classList.remove('active');
+            
+            // Retirer la transition après l'animation
+            setTimeout(() => {
+                card.style.transition = '';
+            }, 300);
             return;
         }
         
@@ -763,6 +872,20 @@ async function addToWatchlistSwiper(movieId, title, posterPath) {
         state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
         state.seenMovieIds.add(movieId);
         showToast('Ajouté à la watchlist');
+        
+        // ✅ CORRECTION : Vérifier que la fonction existe avant de l'appeler
+        if (state.currentView === 'watchlist') {
+            if (typeof updateWatchlistGrid === 'function') {
+                updateWatchlistGrid(movieId, 'add', { title, poster_path: posterPath });
+            } else {
+                console.log('⚠️ updateWatchlistGrid non chargée, rechargement liste...');
+                setTimeout(() => {
+                    if (typeof loadWatchlist === 'function') {
+                        loadWatchlist();
+                    }
+                }, 100);
+            }
+        }
     }
 }
 
@@ -775,6 +898,21 @@ async function addToWatchedSwiper(movieId, title, posterPath) {
         state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
         state.seenMovieIds.add(movieId);
         showToast('Marqué comme vu');
+        
+        // ✅ CORRECTION : Vérifier que la fonction existe avant de l'appeler
+        if (state.currentView === 'watched') {
+            if (typeof updateWatchedGrid === 'function') {
+                updateWatchedGrid(movieId, 'add', { title, poster_path: posterPath });
+            } else {
+                console.log('⚠️ updateWatchedGrid non chargée, rechargement liste...');
+                setTimeout(() => {
+                    if (typeof loadWatched === 'function') {
+                        loadWatched();
+                    }
+                }, 100);
+            }
+        }
+        
         if (state.swiperIndex >= state.swiperMovies.length - 5) {
             await loadMoreAdaptedMovies();
         }
@@ -816,3 +954,295 @@ function nextSwiperMovie() {
         displaySwiperMovie();
     }
 }
+
+// ============================================
+// AIDE CONTEXTUELLE DU SWIPER (OVERLAY)
+// ============================================
+function showSwiperHelpModal() {
+    console.log('🎯 Affichage de l\'aide contextuelle compacte...');
+    
+    // Supprimer l'overlay existant
+    const existingOverlay = document.getElementById('swiperHelpOverlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'swiperHelpOverlay';
+    
+    overlay.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0) !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 1 !important;
+        pointer-events: all !important;
+        transition: background 0.5s ease, backdrop-filter 0.5s ease;
+        cursor: pointer;
+    `;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    overlay.innerHTML = `
+        <div style="
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        ">
+            <!-- ⬆️ HAUT -->
+            <div id="help-up" style="
+                position: absolute;
+                top: ${isMobile ? '12%' : '15%'};
+                left: 50%;
+                transform: translateX(-50%) scale(0) rotate(180deg);
+                opacity: 0;
+                transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+            ">
+                <div style="
+                    background: rgba(102, 126, 234, 0.25);
+                    padding: ${isMobile ? '12px 20px' : '14px 24px'};
+                    border-radius: 16px;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+                    backdrop-filter: blur(10px);
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                    min-width: ${isMobile ? '140px' : '160px'};
+                ">
+                    <div style="font-size: ${isMobile ? '28px' : '32px'}; margin-bottom: 6px;">⬆️</div>
+                    <div style="font-size: ${isMobile ? '13px' : '14px'}; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 3px;">Swipe HAUT</div>
+                    <div style="font-size: ${isMobile ? '10px' : '11px'}; opacity: 0.9; font-weight: 500;">Passer au suivant</div>
+                </div>
+            </div>
+            
+            <!-- ⬅️ GAUCHE -->
+            <div id="help-left" style="
+                position: absolute;
+                left: ${isMobile ? '5%' : '8%'};
+                top: 50%;
+                transform: translateY(-50%) scale(0) rotate(-180deg);
+                opacity: 0;
+                transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+            ">
+                <div style="
+                    background: rgba(16, 185, 129, 0.25);
+                    padding: ${isMobile ? '12px 18px' : '14px 22px'};
+                    border-radius: 16px;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+                    backdrop-filter: blur(10px);
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                    min-width: ${isMobile ? '120px' : '140px'};
+                ">
+                    <div style="font-size: ${isMobile ? '28px' : '32px'}; margin-bottom: 6px;">⬅️</div>
+                    <div style="font-size: ${isMobile ? '13px' : '14px'}; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 3px;">Swipe GAUCHE</div>
+                    <div style="font-size: ${isMobile ? '10px' : '11px'}; opacity: 0.9; font-weight: 500;">Watchlist</div>
+                </div>
+            </div>
+            
+            <!-- ➡️ DROITE -->
+            <div id="help-right" style="
+                position: absolute;
+                right: ${isMobile ? '5%' : '8%'};
+                top: 50%;
+                transform: translateY(-50%) scale(0) rotate(180deg);
+                opacity: 0;
+                transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+            ">
+                <div style="
+                    background: rgba(239, 68, 68, 0.25);
+                    padding: ${isMobile ? '12px 18px' : '14px 22px'};
+                    border-radius: 16px;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+                    backdrop-filter: blur(10px);
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                    min-width: ${isMobile ? '120px' : '140px'};
+                ">
+                    <div style="font-size: ${isMobile ? '28px' : '32px'}; margin-bottom: 6px;">➡️</div>
+                    <div style="font-size: ${isMobile ? '13px' : '14px'}; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 3px;">Swipe DROITE</div>
+                    <div style="font-size: ${isMobile ? '10px' : '11px'}; opacity: 0.9; font-weight: 500;">Film vu</div>
+                </div>
+            </div>
+            
+            <!-- 👆 CLIC -->
+            <div id="help-click" style="
+                position: absolute;
+                bottom: ${isMobile ? '18%' : '16%'};
+                left: 50%;
+                transform: translateX(-50%) scale(0) rotate(-180deg);
+                opacity: 0;
+                transition: all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+            ">
+                <div style="
+                    background: rgba(251, 190, 36, 0.25);
+                    padding: ${isMobile ? '12px 20px' : '14px 24px'};
+                    border-radius: 16px;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4);
+                    backdrop-filter: blur(10px);
+                    border: 2px solid rgba(255, 255, 255, 0.2);
+                    min-width: ${isMobile ? '140px' : '160px'};
+                ">
+                    <div style="font-size: ${isMobile ? '32px' : '36px'}; margin-bottom: 6px;">👆</div>
+                    <div style="font-size: ${isMobile ? '13px' : '14px'}; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 3px;">CLIQUER</div>
+                    <div style="font-size: ${isMobile ? '10px' : '11px'}; opacity: 0.9; font-weight: 500;">Voir détails</div>
+                </div>
+            </div>
+
+            <!-- Indicateur de fermeture -->
+            <div id="help-close-hint" style="
+                position: absolute;
+                bottom: ${isMobile ? '8%' : '6%'};
+                left: 50%;
+                transform: translateX(-50%) scale(0);
+                opacity: 0;
+                transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+            ">
+                <div style="
+                    background: rgba(100, 100, 100, , 0.3);
+                    backdrop-filter: blur(8px);
+                    padding: 8px 20px;
+                    border-radius: 50px;
+                    color: white;
+                    font-size: ${isMobile ? '11px' : '12px'};
+                    font-weight: 600;
+                    border: 2px solid rgba(255, 255, 255, 0.15);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+                ">
+                    Clique n'importe où pour fermer
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    console.log('✅ Overlay ajouté');
+    
+    // Animer le fond progressivement
+    setTimeout(() => {
+        overlay.style.background = 'rgba(0, 0, 0, 0.92)';
+        overlay.style.backdropFilter = 'blur(12px)';
+    }, 50);
+    
+    // Animations séquentielles
+    const animateElement = (id, delay) => {
+        setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) {
+                const currentTransform = el.style.transform;
+                let newTransform = currentTransform
+                    .replace('scale(0)', 'scale(1)')
+                    .replace(/rotate\([^)]+\)/, 'rotate(0deg)');
+                
+                el.style.transform = newTransform;
+                el.style.opacity = '1';
+                console.log(`✨ Animé: ${id}`);
+            }
+        }, delay);
+    };
+    
+    animateElement('help-up', 300);
+    animateElement('help-left', 800);
+    animateElement('help-right', 1300);
+    animateElement('help-click', 1800);
+    animateElement('help-close-hint', 2300);
+    
+    // Fermeture au clic sur l'overlay
+    overlay.addEventListener('click', (e) => {
+        console.log('🖱️ Clic détecté sur overlay');
+        closeSwiperHelpModal();
+    });
+    
+    // Empêcher la propagation des clics sur les cartes
+    const cards = overlay.querySelectorAll('[id^="help-"]');
+    cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    });
+    
+    overlay.offsetHeight;
+}
+
+function closeSwiperHelpModal() {
+    console.log('🔒 Fermeture de l\'aide...');
+    const overlay = document.getElementById('swiperHelpOverlay');
+    if (!overlay) {
+        console.log('⚠️ Overlay déjà fermé');
+        return;
+    }
+    
+    // Animer la disparition de chaque élément
+    const elements = ['help-close-hint', 'help-click', 'help-right', 'help-left', 'help-up'];
+    elements.forEach((id, index) => {
+        const el = document.getElementById(id);
+        if (el) {
+            setTimeout(() => {
+                const currentTransform = el.style.transform;
+                const newTransform = currentTransform
+                    .replace('scale(1)', 'scale(0)')
+                    .replace('rotate(0deg)', 'rotate(-180deg)');
+                el.style.transform = newTransform;
+                el.style.opacity = '0';
+            }, index * 60);
+        }
+    });
+    
+    // Faire disparaître le fond
+    overlay.style.background = 'rgba(0, 0, 0, 0)';
+    overlay.style.backdropFilter = 'blur(0px)';
+    
+    // Supprimer après les animations
+    setTimeout(() => {
+        overlay.remove();
+        console.log('✅ Aide fermée');
+    }, 700);
+}
+// Animation de fermeture
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    @keyframes pulse {
+        0%, 100% { 
+            opacity: 0.8;
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    }
+    .swiper-help-arrow.left {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    .swiper-help-arrow.right {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    .swiper-help-arrow.up {
+        animation: pulse 2s ease-in-out infinite;
+    }
+`;
+document.head.appendChild(style);

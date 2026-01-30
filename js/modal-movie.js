@@ -799,6 +799,11 @@ async function toggleWatchlistFromModal(movieId, title, posterPath) {
             state.watchlist.splice(index, 1);
             showToast('Retiré de la watchlist');
             if (btn) btn.classList.remove('active');
+            
+            // ✅ Mettre à jour la grille watchlist si elle est affichée
+            if (state.currentView === 'watchlist') {
+                updateWatchlistGrid(movieId, 'remove');
+            }
         } else {
             await apiRequest('/watchlist', {
                 method: 'POST',
@@ -807,6 +812,16 @@ async function toggleWatchlistFromModal(movieId, title, posterPath) {
             state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
             showToast('Ajouté à la watchlist');
             if (btn) btn.classList.add('active');
+            
+            // ✅ Mettre à jour la grille watchlist si elle est affichée
+            if (state.currentView === 'watchlist') {
+                updateWatchlistGrid(movieId, 'add', { title, poster_path: posterPath });
+            }
+        }
+        
+        // ✅ Synchroniser avec le cache offline
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            OfflineStorage.syncAllData().catch(err => console.warn('Erreur sync cache:', err));
         }
     } catch (error) {
         showToast('Erreur', 'error');
@@ -834,6 +849,11 @@ async function toggleWatchedFromModal(movieId, title, posterPath) {
             state.watched.splice(index, 1);
             showToast('Retiré des films vus');
             if (btn) btn.classList.remove('active');
+            
+            // ✅ Mettre à jour la grille watched si elle est affichée
+            if (state.currentView === 'watched') {
+                updateWatchedGrid(movieId, 'remove');
+            }
         } else {
             await apiRequest('/watched', {
                 method: 'POST',
@@ -842,6 +862,16 @@ async function toggleWatchedFromModal(movieId, title, posterPath) {
             state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
             showToast('Marqué comme vu');
             if (btn) btn.classList.add('active');
+            
+            // ✅ Mettre à jour la grille watched si elle est affichée
+            if (state.currentView === 'watched') {
+                updateWatchedGrid(movieId, 'add', { title, poster_path: posterPath });
+            }
+        }
+        
+        // ✅ Synchroniser avec le cache offline
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            OfflineStorage.syncAllData().catch(err => console.warn('Erreur sync cache:', err));
         }
     } catch (error) {
         showToast('Erreur', 'error');
@@ -1358,4 +1388,185 @@ async function showFriendsWhoWatched(movieId) {
         console.error('Erreur amis film:', error);
         return '';
     }
+}
+
+// ✅ Fonction pour mettre à jour dynamiquement la grille watchlist
+function updateWatchlistGrid(movieId, action, movieData = null) {
+    const grid = document.getElementById('watchlistGrid');
+    if (!grid) return;
+    
+    if (action === 'remove') {
+        // Retirer le film de la grille
+        const movieCard = grid.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
+        if (movieCard) {
+            movieCard.style.transition = 'all 0.3s ease';
+            movieCard.style.opacity = '0';
+            movieCard.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                movieCard.remove();
+                
+                // Vérifier s'il reste des films
+                const remainingCards = grid.querySelectorAll('.movie-card');
+                if (remainingCards.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
+                }
+            }, 300);
+        }
+        
+        // Retirer du state
+        const index = state.watchlistAllMovies.findIndex(m => m.id == movieId);
+        if (index !== -1) {
+            state.watchlistAllMovies.splice(index, 1);
+        }
+        
+        // Mettre à jour currentGridMovies si on navigue dans les films
+        const gridIndex = currentGridMovies.findIndex(m => m.id == movieId);
+        if (gridIndex !== -1) {
+            currentGridMovies.splice(gridIndex, 1);
+            // Ajuster currentMovieIndex si nécessaire
+            if (currentMovieIndex > gridIndex) {
+                currentMovieIndex--;
+            }
+        }
+        
+    } else if (action === 'add' && movieData) {
+        // Ajouter le film au début de la grille
+        const newMovie = {
+            id: movieId,
+            title: movieData.title,
+            poster_path: movieData.poster_path,
+            release_date: null,
+            genres: [],
+            added_at: new Date().toISOString(),
+            tmdb_rating: 0
+        };
+        
+        // Ajouter au state
+        state.watchlistAllMovies.unshift(newMovie);
+        
+        // Créer et ajouter la carte
+        const movieCard = createMovieCard(newMovie);
+        
+        // Si la grille est vide, la remplacer complètement
+        const emptyState = grid.querySelector('.empty-state');
+        if (emptyState) {
+            grid.innerHTML = '';
+        }
+        
+        // Insérer au début
+        grid.insertAdjacentHTML('afterbegin', movieCard);
+        
+        // Animation d'apparition
+        const newCard = grid.querySelector('.movie-card');
+        if (newCard) {
+            newCard.style.opacity = '0';
+            newCard.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                newCard.style.transition = 'all 0.3s ease';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'scale(1)';
+            }, 10);
+        }
+    }
+}
+
+// ✅ Fonction pour mettre à jour dynamiquement la grille watched
+function updateWatchedGrid(movieId, action, movieData = null) {
+    const grid = document.getElementById('watchedGrid');
+    if (!grid) return;
+    
+    if (action === 'remove') {
+        // Retirer le film de la grille
+        const movieCard = grid.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
+        if (movieCard) {
+            movieCard.style.transition = 'all 0.3s ease';
+            movieCard.style.opacity = '0';
+            movieCard.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                movieCard.remove();
+                
+                // Vérifier s'il reste des films
+                const remainingCards = grid.querySelectorAll('.movie-card');
+                if (remainingCards.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><h3>Tu n\'as pas encore vu de films</h3></div>';
+                }
+            }, 300);
+        }
+        
+        // Retirer du state
+        const index = state.watchedAllMovies.findIndex(m => m.id == movieId);
+        if (index !== -1) {
+            state.watchedAllMovies.splice(index, 1);
+        }
+        
+        // Mettre à jour currentGridMovies si on navigue dans les films
+        const gridIndex = currentGridMovies.findIndex(m => m.id == movieId);
+        if (gridIndex !== -1) {
+            currentGridMovies.splice(gridIndex, 1);
+            // Ajuster currentMovieIndex si nécessaire
+            if (currentMovieIndex > gridIndex) {
+                currentMovieIndex--;
+            }
+        }
+        
+    } else if (action === 'add' && movieData) {
+        // Ajouter le film au début de la grille
+        const newMovie = {
+            id: movieId,
+            title: movieData.title,
+            poster_path: movieData.poster_path,
+            release_date: null,
+            genres: [],
+            watched_at: new Date().toISOString(),
+            tmdb_rating: 0
+        };
+        
+        // Ajouter au state
+        state.watchedAllMovies.unshift(newMovie);
+        
+        // Créer et ajouter la carte
+        const movieCard = createMovieCard(newMovie);
+        
+        // Si la grille est vide, la remplacer complètement
+        const emptyState = grid.querySelector('.empty-state');
+        if (emptyState) {
+            grid.innerHTML = '';
+        }
+        
+        // Insérer au début
+        grid.insertAdjacentHTML('afterbegin', movieCard);
+        
+        // Animation d'apparition
+        const newCard = grid.querySelector('.movie-card');
+        if (newCard) {
+            newCard.style.opacity = '0';
+            newCard.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                newCard.style.transition = 'all 0.3s ease';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'scale(1)';
+            }, 10);
+        }
+    }
+}
+
+// ✅ Fonction helper pour créer une carte de film
+function createMovieCard(movie) {
+    const posterUrl = movie.poster_path 
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` 
+        : 'https://via.placeholder.com/500x750/1a1a1a/666?text=No+Poster';
+    
+    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : '';
+    const rating = movie.tmdb_rating ? movie.tmdb_rating.toFixed(1) : '';
+    
+    return `
+        <div class="movie-card" data-movie-id="${movie.id}" onclick="showMovieDetails(${movie.id}, true)">
+            <img src="${posterUrl}" alt="${movie.title}" loading="lazy">
+            <div class="movie-info">
+                <h3>${movie.title}</h3>
+                ${year ? `<p>${year}</p>` : ''}
+                ${rating ? `<div class="movie-rating">⭐ ${rating}</div>` : ''}
+            </div>
+        </div>
+    `;
 }

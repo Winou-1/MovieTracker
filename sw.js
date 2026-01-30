@@ -73,10 +73,16 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
+    // ✅ IMPORTANT : Ne pas intercepter les requêtes POST/PUT/DELETE
+    if (request.method !== 'GET') {
+        // Laisser passer les requêtes non-GET sans intervention
+        return;
+    }
+
     // Stratégie différente selon le type de ressource
     
     // 1. API calls : Network First
-    if (url.pathname.startsWith('/api/')) {
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/functions/')) {
         event.respondWith(networkFirst(request));
         return;
     }
@@ -99,6 +105,11 @@ self.addEventListener('fetch', (event) => {
 
 // Stratégie Cache First (pour assets statiques et images)
 async function cacheFirst(request) {
+    // ✅ Vérification supplémentaire : ne jamais cacher les requêtes non-GET
+    if (request.method !== 'GET') {
+        return fetch(request);
+    }
+
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);
     
@@ -109,8 +120,8 @@ async function cacheFirst(request) {
     try {
         const response = await fetch(request);
         
-        // Mettre en cache si la requête réussit
-        if (response && response.status === 200) {
+        // Mettre en cache si la requête réussit ET que c'est une requête GET
+        if (response && response.status === 200 && request.method === 'GET') {
             cache.put(request, response.clone());
         }
         
@@ -130,11 +141,16 @@ async function cacheFirst(request) {
 
 // Stratégie Network First (pour API)
 async function networkFirst(request) {
+    // ✅ Vérification supplémentaire : ne jamais cacher les requêtes non-GET
+    if (request.method !== 'GET') {
+        return fetch(request);
+    }
+
     try {
         const response = await fetch(request);
         
-        // Mettre en cache pour usage offline
-        if (response && response.status === 200) {
+        // Mettre en cache pour usage offline UNIQUEMENT si GET
+        if (response && response.status === 200 && request.method === 'GET') {
             const cache = await caches.open(CACHE_NAME);
             cache.put(request, response.clone());
         }
