@@ -1,5 +1,3 @@
-// friends.js - Système d'amis CORRIGÉ
-
 let friendsState = {
     friends: [],
     requests: [],
@@ -42,36 +40,25 @@ async function loadFriendRequests() {
     }
 }
 
-// ✅ CORRECTION : Route API corrigée
+// tout est dans le nom
 async function searchUsers(query) {
     const resultsContainer = document.getElementById('userSearchResults');
     const input = document.getElementById('userSearchInput');
-
-    // Nettoyage : On ne garde que les chiffres
     const cleanQuery = query.replace(/\D/g, ''); 
-    
-    // Si l'utilisateur a tapé des lettres, on les retire visuellement
     if (cleanQuery !== query) {
         input.value = cleanQuery;
     }
-
-    // On annule la recherche précédente
     clearTimeout(window.searchTimeout);
-
-    // Si on n'a pas exactement 6 chiffres, on efface les résultats
     if (cleanQuery.length !== 6) {
         if (resultsContainer) resultsContainer.innerHTML = '';
         return;
     }
-
-    // Recherche automatique dès qu'il y a 6 chiffres
     window.searchTimeout = setTimeout(async () => {
         if (resultsContainer) {
             resultsContainer.innerHTML = '<div style="text-align:center; padding:20px;"><div class="loader"></div></div>';
         }
 
         try {
-            // ✅ CORRECTION : Route corrigée /friends/search au lieu de /users/search
             const results = await apiRequest(`/friends/search?q=${cleanQuery}`);
             friendsState.searchResults = results || [];
 
@@ -139,7 +126,6 @@ async function sendFriendRequest(friendId) {
             body: JSON.stringify({ friend_id: friendId })
         });
         showToast('Demande envoyée !');
-        // Rafraîchir la recherche
         await searchUsers(document.getElementById('userSearchInput').value);
     } catch (error) {
         showToast('Erreur lors de l\'envoi', 'error');
@@ -358,13 +344,13 @@ function closeFriendProfile() {
         modal.classList.remove('active');
         setTimeout(() => {
             modal.remove();
-        }, 300); // Attendre la fin de l'animation
+        }, 300);
     }
-    document.body.style.overflow = ''; // Réactiver le scroll
+    document.body.style.overflow = '';
 }
 
+// netoyer les zombis là
 function cleanupModals() {
-    // Supprimer toutes les modals de profil d'ami orphelines
     const orphanModals = document.querySelectorAll('#friendProfileModal');
     orphanModals.forEach(modal => {
         modal.remove();
@@ -372,7 +358,6 @@ function cleanupModals() {
     document.body.style.overflow = '';
 }
 
-// ✅ AMÉLIORATION : Interface de recherche plus claire
 function renderFriendsSection() {
     const container = document.querySelector('#friendsSection .container');
     if (!container) return;
@@ -462,7 +447,6 @@ function renderFriendsTab() {
             </div>
         `;
     } else if (friendsState.currentTab === 'search') {
-        // ✅ AMÉLIORATION : Afficher le code ami de l'utilisateur
         const userCode = state.user?.friend_code || '000000';
         
         content.innerHTML = `
@@ -503,7 +487,6 @@ function renderFriendsTab() {
     }
 }
 
-// ✅ NOUVELLE FONCTION : Copier le code ami
 function copyFriendCode(code) {
     navigator.clipboard.writeText(code).then(() => {
         showToast('Code copié ! 📋');
@@ -650,7 +633,7 @@ window.showFriendsWhoWatched = async function(movieId) {
     }
 };
 
-// FERMETURE DES MODALS AU CLIC À L'EXTÉRIEUR
+// fermeture quand on clique en dehors
 window.addEventListener('click', (event) => {
     const friendsInteractionModal = document.getElementById('friendsInteractionModal');
     if (friendsInteractionModal && event.target === friendsInteractionModal) {

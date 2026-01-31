@@ -1,4 +1,4 @@
-/* Override du modal de base */
+
 #movieModal .modal-content {
     padding: 0;
     max-width: 100%;
@@ -11,14 +11,12 @@
     background: var(--bg-dark);
 }
 
-/* Container principal */
 .movie-modal-new {
     position: relative;
     min-height: 100vh;
     background: var(--bg-dark);
 }
 
-/* Back Button (top left) */
 .modal-back-btn {
     position: fixed;
     top: 20px;
@@ -43,7 +41,6 @@
     transform: scale(1.1);
 }
 
-/* Heart Button (top right) */
 .modal-heart-btn {
     position: fixed;
     top: 20px;
@@ -76,7 +73,6 @@
     fill: currentColor;
 }
 
-/* Header avec backdrop */
 .movie-modal-header {
     position: relative;
     width: 100%;
@@ -120,13 +116,11 @@
     object-fit: cover;
 }
 
-/* Content */
 .movie-modal-content {
     padding: 24px 10px 80px;
     background: var(--bg-dark);
 }
 
-/* Title Section */
 .movie-modal-title-section {
     text-align: center;
     margin-bottom: 24px;
@@ -170,17 +164,18 @@
     font-weight: 600;
     color: var(--primary);
 }
-/* Rating Section */
 .movie-modal-rating-section {
     border-radius: 16px;
     position: relative;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .rating-header {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     position: relative;
 }
 
@@ -193,7 +188,9 @@
 .rating-stars-container {
     position: relative;
     display: inline-flex;
-    padding: 8px;
+    padding: 0 !important;
+    width: 100%;
+    max-width: 100%;
 }
 
 .rating-clear-btn {
@@ -231,19 +228,37 @@
 }
 
 .movie-modal-stars {
-    display: flex;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: wrap;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center;
+    gap: 0 !important;
+    flex-wrap: nowrap !important;
+    width: 80% !important;
+    max-width: 80% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .modal-star-new {
-    font-size: 32px;
     color: rgba(255, 255, 255, 0.2);
     cursor: pointer;
     transition: all 0.2s ease;
     user-select: none;
+    flex: 1;
     flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(28px, 9vw, 48px) !important;
+    line-height: 1;
+    -webkit-touch-callout: none;
 }
 
 .modal-star-new.active {
@@ -265,13 +280,11 @@
     position: relative;
 }
 
-/* ✅ Étoile complète */
 .modal-star-new.full {
     color: #fbbf24;
     filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
 }
 
-/* ✅ Demi-étoile (avec gradient) */
 .modal-star-new.half {
     background: linear-gradient(90deg, #fbbf24 50%, rgba(255, 255, 255, 0.2) 50%);
     -webkit-background-clip: text;
@@ -284,7 +297,92 @@
     transform: scale(1.15);
 }
 
-/* Fix pour éviter la sélection de texte lors du clic */
+.modal-star-new:active {
+    animation: starClick 0.3s ease;
+}
+
+
+
+
+@media (min-width: 769px) {
+    .modal-star-new {
+        font-size: clamp(32px, 3.5vw, 42px) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-star-new {
+        font-size: clamp(30px, 8vw, 40px) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-star-new {
+        font-size: clamp(28px, 9vw, 36px) !important;
+    }
+}
+
+@media (max-width: 380px) {
+    .modal-star-new {
+        font-size: clamp(26px, 9.5vw, 34px) !important;
+    }
+}
+
+@media (max-width: 320px) {
+    .modal-star-new {
+        font-size: clamp(24px, 10vw, 32px) !important;
+    }
+}
+
+.rating-clear-btn {
+    position: absolute;
+    top: -8px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: #ef4444;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.rating-clear-btn:hover {
+    background: #dc2626;
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+}
+
+.rating-clear-btn:active {
+    transform: scale(0.95);
+}
+
+.rating-clear-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+@keyframes starClick {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+@keyframes starPulse {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5)); }
+    50% { filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.8)); }
+}
+
+.modal-star-new.full {
+    animation: starPulse 2s ease-in-out infinite;
+}
+
 .movie-modal-stars {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -313,38 +411,8 @@
     -webkit-touch-callout: none;
 }
 
-/* Adaptation responsive pour les étoiles */
-@media (max-width: 480px) {
-    .modal-star-new {
-        font-size: 28px;
-    }
-    
-    .movie-modal-stars {
-        gap: 3px;
-    }
-}
 
-@media (max-width: 380px) {
-    .modal-star-new {
-        font-size: 24px;
-    }
-    
-    .movie-modal-stars {
-        gap: 2px;
-    }
-}
 
-@media (max-width: 320px) {
-    .modal-star-new {
-        font-size: 20px;
-    }
-    
-    .movie-modal-stars {
-        gap: 1px;
-    }
-}
-
-/* Action Buttons */
 .movie-modal-actions {
     display: flex;
     justify-content: center;
@@ -372,7 +440,6 @@
     overflow: hidden;
 }
 
-/* Effet de ripple au clic */
 .action-btn::before {
     content: '';
     position: absolute;
@@ -391,14 +458,12 @@
     height: 300%;
 }
 
-/* Effet hover desktop */
 @media (hover: hover) {
     .action-btn:hover {
         transform: scale(1.1);
     }
 }
 
-/* Effet tactile mobile */
 @media (hover: none) {
     .action-btn:active {
         transform: scale(0.9);
@@ -457,7 +522,6 @@
     transform: scale(1.2);
 }
 
-/* Label sous le bouton */
 .action-btn-label {
     position: absolute;
     bottom: -24px;
@@ -482,7 +546,6 @@
     animation: likeHeartBeat 0.5s;
 }
 
-/* Sections */
 .movie-modal-section {
     margin-bottom: 32px;
 }
@@ -546,7 +609,7 @@
     color: var(--text-muted);
 }
 
-/* Similar Movies */
+/*film similar */
 .similar-movies-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -582,7 +645,6 @@
     white-space: nowrap;
 }
 
-/* Login Prompt */
 .login-prompt {
     text-align: center;
     padding: 20px;
@@ -590,7 +652,6 @@
     font-size: 14px;
 }
 
-/* Mobile Adjustments */
 @media (max-width: 768px) {
     .movie-modal-header {
         height: 45vh;
@@ -625,7 +686,6 @@
     }
 }
 
-/* Desktop */
 @media (min-width: 769px) {
     #movieModal .modal-content {
         max-width: 700px;
@@ -645,7 +705,6 @@
     }
 }
 
-/* Spinner */
 .spinner {
     width: 40px;
     height: 40px;
@@ -658,7 +717,6 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
-/* ==================== ACTOR MODAL - RESPONSIVE ==================== */
 
 .actor-modal-container {
     position: relative;
@@ -698,7 +756,6 @@
     transform: scale(1.1);
 }
 
-/* Header avec backdrop */
 .actor-modal-header {
     position: relative;
     height: 160px;
@@ -781,7 +838,6 @@
     white-space: nowrap;
 }
 
-/* Stats compactes */
 .actor-modal-stats {
     display: flex;
     align-items: center;
@@ -828,7 +884,6 @@
     flex-shrink: 0;
 }
 
-/* Biographie */
 .actor-modal-bio {
     padding: 20px;
     border-bottom: 1px solid var(--border);
@@ -876,7 +931,6 @@
     opacity: 0.8;
 }
 
-/* Filmographie - Plus de scroll séparé */
 .actor-modal-filmography {
     padding: 20px;
     padding-bottom: 80px;
@@ -896,7 +950,6 @@
     color: var(--text-secondary);
 }
 
-/* Grille des films - Responsive */
 .actor-films-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -978,7 +1031,6 @@
     white-space: nowrap;
 }
 
-/* Loader pour lazy loading */
 .actor-films-loader {
     display: none;
     justify-content: center;
@@ -997,7 +1049,6 @@
 
 
 
-/* ==================== LAZY LOADING FILMS SIMILAIRES ==================== */
 
 .similar-movies-loader {
     display: flex;
@@ -1022,7 +1073,6 @@
     to { transform: rotate(360deg); }
 }
 
-/* Ajustement du titre avec compteur */
 .section-title {
     display: flex;
     align-items: baseline;

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques - CineTrack</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/stats.css">
+    <link rel="stylesheet" href="css/buttons.css">
+    <link rel="stylesheet" href="css/mobile.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo" onclick="window.location.href='index.html'">🎬 CineTrack</div>
+                <ul class="nav-links">
+                    <li><a onclick="navigateTo('home')">Accueil</a></li>
+                    <li><a onclick="navigateTo('watchlist')">Ma Liste</a></li>
+                    <li><a onclick="navigateTo('watched')">Films Vus</a></li>
+                    <li><a onclick="navigateTo('stats')">Statistiques</a></li>
+                    <li><a onclick="navigateTo('profile')">Profil</a></li>
+                </ul>
+                <div id="authButtons"></div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Stats Page -->
+    <div class="stats-page">
+        <!-- Header -->
+        <div class="stats-page-header">
+            <h1>📊 Mes Statistiques</h1>
+            <p class="stats-subtitle">Analyse de votre activité cinématographique</p>
+        </div>
+
+        <!-- Overview Stats Grid -->
+        <div class="stats-overview-grid">
+            <div class="stat-overview-card">
+                <div class="stat-overview-icon">🎬</div>
+                <div class="stat-overview-value" id="totalWatched">0</div>
+                <div class="stat-overview-label">Films Vus</div>
+            </div>
+            
+            <div class="stat-overview-card">
+                <div class="stat-overview-icon">📋</div>
+                <div class="stat-overview-value" id="totalWatchlist">0</div>
+                <div class="stat-overview-label">En Attente</div>
+            </div>
+            
+            <div class="stat-overview-card">
+                <div class="stat-overview-icon">⏱️</div>
+                <div class="stat-overview-value" id="totalHours">0</div>
+                <div class="stat-overview-label">Heures Visionnées</div>
+            </div>
+            
+            <div class="stat-overview-card">
+                <div class="stat-overview-icon">⭐</div>
+                <div class="stat-overview-value" id="avgRating">0</div>
+                <div class="stat-overview-label">Note Moyenne</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="stats-charts-grid">
+            <!-- Genres Chart -->
+            <div class="stats-chart-card">
+                <h3 class="stats-chart-title">
+                    🎭 Genres Préférés
+                </h3>
+                <canvas id="genresChart"></canvas>
+            </div>
+
+            <!-- Ratings Distribution Chart -->
+            <div class="stats-chart-card">
+                <h3 class="stats-chart-title">
+                    ⭐ Distribution des Notes
+                </h3>
+                <canvas id="ratingsChart"></canvas>
+            </div>
+
+            <!-- Monthly Activity Chart -->
+            <div class="stats-chart-card">
+                <h3 class="stats-chart-title">
+                    📅 Activité Mensuelle
+                </h3>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+
+            <!-- Decades Chart -->
+            <div class="stats-chart-card">
+                <h3 class="stats-chart-title">
+                    🎞️ Films par Décennie
+                </h3>
+                <canvas id="decadesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Fun Stats Section -->
+        <div class="stats-fun-section">
+            <h2 class="stats-section-title">🎉 Statistiques Amusantes</h2>
+            <div class="stats-fun-grid">
+                <div class="stats-fun-card">
+                    <div class="stats-fun-emoji">🍿</div>
+                    <div class="stats-fun-value" id="funPopcorn">0</div>
+                    <div class="stats-fun-label">Bols de popcorn estimés</div>
+                </div>
+                
+                <div class="stats-fun-card">
+                    <div class="stats-fun-emoji">🌙</div>
+                    <div class="stats-fun-value" id="funNights">0</div>
+                    <div class="stats-fun-label">Soirées cinéma équivalentes</div>
+                </div>
+                
+                <div class="stats-fun-card">
+                    <div class="stats-fun-emoji">🎬</div>
+                    <div class="stats-fun-value" id="funMarathon">0</div>
+                    <div class="stats-fun-label">Jours de marathon</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <a class="mobile-nav-item" onclick="navigateTo('home')">
+            <span class="mobile-nav-icon">🏠</span>
+            <span class="mobile-nav-label">Accueil</span>
+        </a>
+        <a class="mobile-nav-item" onclick="navigateTo('watchlist')">
+            <span class="mobile-nav-icon">📋</span>
+            <span class="mobile-nav-label">Liste</span>
+        </a>
+        <a class="mobile-nav-item" onclick="openSwiper()">
+            <span class="mobile-nav-icon">💫</span>
+            <span class="mobile-nav-label">Swiper</span>
+        </a>
+        <a class="mobile-nav-item active" onclick="navigateTo('stats')">
+            <span class="mobile-nav-icon">📊</span>
+            <span class="mobile-nav-label">Stats</span>
+        </a>
+        <a class="mobile-nav-item" onclick="navigateTo('profile')">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Profil</span>
+        </a>
+    </nav>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSbWCF473DqLE19ho90glLD5rfpu1maFw",
+            authDomain: "cinetrack-5bc00.firebaseapp.com",
+            projectId: "cinetrack-5bc00",
+            storageBucket: "cinetrack-5bc00.firebasestorage.app",
+            messagingSenderId: "122397112891",
+            appId: "1:122397112891:web:1d023ba85d66810793e5f0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        window.getDocs = getDocs;
+        window.collection = collection;
+    </script>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="stats-fixed.js"></script>
+    
+    <script>
+        // Navigation
+        function navigateTo(page) {
+            const pages = {
+                'home': 'index.html',
+                'watchlist': 'index.html?view=watchlist',
+                'watched': 'index.html?view=watched',
+                'stats': 'stats.html',
+                'profile': 'index.html?view=profile'
+            };
+            window.location.href = pages[page] || 'index.html';
+        }
+
+        function openSwiper() {
+            window.location.href = 'index.html?swiper=true';
+        }
+
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            const btn = document.querySelector('.theme-toggle');
+            btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+        }
+
+        // Charger le thème sauvegardé
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+
+        // Calculer les stats amusantes
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const totalHours = parseInt(document.getElementById('totalHours').textContent) || 0;
+                const totalWatched = parseInt(document.getElementById('totalWatched').textContent) || 0;
+                
+                // Bols de popcorn (1 par film)
+                document.getElementById('funPopcorn').textContent = totalWatched;
+                
+                // Soirées cinéma (1 soirée = 2h30)
+                const nights = Math.round(totalHours / 2.5);
+                document.getElementById('funNights').textContent = nights;
+                
+                // Jours de marathon (24h)
+                const days = Math.round(totalHours / 24);
+                document.getElementById('funMarathon').textContent = days;
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

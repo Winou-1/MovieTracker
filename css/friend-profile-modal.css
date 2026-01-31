@@ -1,5 +1,3 @@
-/* Modal de profil d'ami - Design moderne */
-
 .friend-profile-modal {
     padding: 0 !important;
     background: var(--bg-elevated);
@@ -10,8 +8,6 @@
     overflow-y: auto;
     border-radius: 5px;
 }
-
-/* Scrollbar personnalisée */
 .friend-profile-modal::-webkit-scrollbar {
     width: 8px;
 }
@@ -101,7 +97,7 @@
     opacity: 0.7;
 }
 
-/* Statistiques */
+/* Stats */
 .friend-profile-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -148,7 +144,7 @@
     margin-top: 4px;
 }
 
-/* Sections de films */
+/*films */
 .friend-profile-section {
     padding: 32px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -236,7 +232,7 @@
     font-weight: 600;
 }
 
-/* État vide */
+/* état vide */
 .friend-profile-empty {
     text-align: center;
     padding: 60px 32px;
@@ -316,7 +312,6 @@
     font-size: 16px;
 }
 
-/* Bouton fermer amélioré */
 .friend-profile-modal .close-modal {
     position: sticky;
     top: 16px;
@@ -410,11 +405,7 @@
     }
 }
 
-
-
-
-
-/* ==================== MODAL AMIS QUI ONT VU LE FILM ==================== */
+/*Moadal film des amis*/
 
 .friends-movie-modal-container {
     max-width: 500px;
@@ -472,7 +463,6 @@
     margin: 0;
 }
 
-/* Body avec scroll */
 .friends-movie-modal-body {
     flex: 1;
     overflow-y: auto;
@@ -492,7 +482,6 @@
     border-radius: 4px;
 }
 
-/* Sections */
 .friends-movie-section {
     margin-bottom: 28px;
 }
@@ -532,14 +521,12 @@
     font-weight: 700;
 }
 
-/* Liste des amis */
 .friends-movie-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* Item ami */
 .friends-movie-item {
     display: flex;
     align-items: center;
@@ -558,7 +545,6 @@
     background: rgba(59, 130, 246, 0.05);
 }
 
-/* Avatar avec badge */
 .friends-movie-item-avatar {
     position: relative;
     flex-shrink: 0;
@@ -594,7 +580,6 @@
     background: linear-gradient(135deg, #10b981, #059669);
 }
 
-/* Info ami */
 .friends-movie-item-info {
     flex: 1;
     min-width: 0;
@@ -632,7 +617,6 @@
     color: var(--text-secondary);
 }
 
-/* Flèche */
 .friends-movie-item-arrow {
     flex-shrink: 0;
     color: var(--text-muted);
@@ -644,7 +628,6 @@
     transform: translateX(4px);
 }
 
-/* États vides/erreur/chargement */
 .friends-movie-modal-loading,
 .friends-movie-modal-empty,
 .friends-movie-modal-error {

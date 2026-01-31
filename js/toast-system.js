@@ -1,5 +1,3 @@
-// toast-system.js - Système de notifications moderne avec file d'attente
-
 class ToastManager {
     constructor() {
         this.toasts = [];
@@ -9,7 +7,6 @@ class ToastManager {
     }
     
     init() {
-        // Créer le container de toasts
         this.container = document.createElement('div');
         this.container.id = 'toastContainer';
         this.container.style.cssText = `
@@ -27,31 +24,18 @@ class ToastManager {
     }
     
     show(message, type = 'success', duration = 3000) {
-        // Créer le toast
         const toast = this.createToast(message, type);
-        
-        // Ajouter à la liste
         this.toasts.push(toast);
-        
-        // Limiter le nombre de toasts affichés
         if (this.toasts.length > this.maxToasts) {
             const oldToast = this.toasts.shift();
             this.removeToast(oldToast, true);
         }
-        
-        // Ajouter au DOM
         this.container.appendChild(toast.element);
-        
-        // Animer l'entrée
         requestAnimationFrame(() => {
             toast.element.style.transform = 'translateX(0)';
             toast.element.style.opacity = '1';
         });
-        
-        // Faire descendre les autres toasts
         this.repositionToasts();
-        
-        // Auto-suppression
         toast.timeout = setTimeout(() => {
             this.removeToast(toast);
         }, duration);
@@ -134,19 +118,16 @@ class ToastManager {
         
         const toast = { element, type, message };
         
-        // Clic sur le bouton de fermeture
         const closeBtn = element.querySelector('button');
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.removeToast(toast);
         });
         
-        // Clic sur le toast pour le fermer
         element.addEventListener('click', () => {
             this.removeToast(toast);
         });
         
-        // Hover pour pause
         element.addEventListener('mouseenter', () => {
             if (toast.timeout) {
                 clearTimeout(toast.timeout);
@@ -170,7 +151,6 @@ class ToastManager {
             clearTimeout(toast.timeout);
         }
         
-        // Animation de sortie
         if (instant) {
             toast.element.remove();
         } else {
@@ -184,19 +164,15 @@ class ToastManager {
             }, 300);
         }
         
-        // Retirer de la liste
         const index = this.toasts.indexOf(toast);
         if (index > -1) {
             this.toasts.splice(index, 1);
         }
         
-        // Repositionner les autres
         this.repositionToasts();
     }
     
     repositionToasts() {
-        // Les toasts se positionnent automatiquement en flex-direction: column
-        // Pas besoin de repositionnement manuel
     }
     
     clear() {
@@ -205,14 +181,11 @@ class ToastManager {
     }
 }
 
-// Instance globale
 const toastManager = new ToastManager();
 
-// Fonction helper pour compatibilité avec l'ancien code
 function showToast(message, type = 'success') {
     toastManager.show(message, type);
 }
 
-// Export pour utilisation dans d'autres fichiers
 window.toastManager = toastManager;
 window.showToast = showToast;

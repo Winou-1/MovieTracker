@@ -130,9 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token) {
         state.token = token;
         
-        // ✅ CACHE-FIRST : Charger immédiatement depuis le cache
+        // Charger immédiatement depuis le cache
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
-            console.log('📦 Chargement initial depuis le cache...');
             
             OfflineStorage.getProfile().then(cachedProfile => {
                 if (cachedProfile) {
@@ -142,12 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     state.userProfile.avatar = cachedProfile.avatar;
                     localStorage.setItem('username', cachedProfile.username);
                     updateUI();
-                    console.log('⚡ Profil chargé depuis le cache');
                 }
             });
         }
         
-        // ✅ Ensuite charger/synchroniser avec le serveur
+        // Ensuite charger/synchroniser avec le serveur
         const savedUsername = localStorage.getItem('username');
         const savedEmail = localStorage.getItem('userEmail');
         
@@ -159,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.userProfile.avatar = userProfile.avatar;
                 localStorage.setItem('username', userProfile.username);
             } else if (!state.user) {
-                // Fallback si pas de cache et pas de serveur
                 state.user = { username: savedUsername || 'Utilisateur' };
                 state.userProfile.username = state.user.username;
             }
@@ -167,26 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
             loadUserData();
             if (typeof loadFriends === 'function') loadFriends();
         }).catch(error => {
-            console.warn('⚠️ Impossible de charger le profil depuis le serveur');
-            // L'affichage cache a déjà été fait plus haut
+            console.warn('Impossible de charger le profil depuis le serveur');
             updateUI();
         });
     }
-
-    // ✅ Vérifier si on est en mode offline
     const isOnline = navigator.onLine;
     const hasToken = getToken();
     
-    console.log('🔍 État initial:', { isOnline, hasToken });
-    
     if (!isOnline && hasToken) {
-        console.log('📡 Mode offline détecté - Affichage intro');
-        // Attendre que OfflineIntro soit chargé
         setTimeout(() => {
             if (typeof OfflineIntro !== 'undefined') {
                 switchView('intro');
             } else {
-                console.warn('⚠️ OfflineIntro non chargé, affichage watchlist');
+                console.warn('OfflineIntro non chargé, affichage watchlist');
                 switchView('watchlist');
             }
         }, 100);
@@ -196,9 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupInfiniteScroll();
     
-    // ✅ Écouter les changements de connexion
     window.addEventListener('online', () => {
-        console.log('🌐 Connexion rétablie');
         updateUI();
         if (state.currentView === 'intro') {
             switchView('movies');
@@ -207,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     window.addEventListener('offline', () => {
-        console.log('📡 Connexion perdue');
         updateUI();
         if (getToken()) {
             switchView('intro');

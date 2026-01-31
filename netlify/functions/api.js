@@ -39,9 +39,8 @@ export const handler = async (event) => {
     const path = event.path.replace('/.netlify/functions/api', '');
     const method = event.httpMethod;
     
-    console.log(`${method} ${path}`);
 
-    // ==================== AUTH ====================
+    //Authentification et gestion des utilisateurs
     
     // POST /auth/register
     if (path === '/auth/register' && method === 'POST') {
@@ -71,7 +70,6 @@ export const handler = async (event) => {
       
       const friendCode = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // UNE SEULE insertion avec toutes les infos d'un coup
       const newUser = await sql`
         INSERT INTO users (username, email, password, friend_code)
         VALUES (${username}, ${email}, ${hashedPassword}, ${friendCode})
@@ -227,7 +225,6 @@ export const handler = async (event) => {
           `
         });
 
-        console.log('📧 Email envoyé avec succès:', emailResult);
 
         // En DEV, retourner aussi le lien pour faciliter les tests
         if (process.env.NODE_ENV === 'development') {
@@ -324,7 +321,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== ROUTES PUBLIQUES (suite) ====================
+    // routes en public
     
     // Route de test (pour vérifier que l'API fonctionne)
     if (path === '/health' && method === 'GET') {
@@ -335,7 +332,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== ROUTES PROTÉGÉES ====================
+    // routes protégées (authentification requise)
     
     const user = getUserFromToken(event.headers.authorization);
     
@@ -489,7 +486,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== WATCHLIST ====================
+    // watchlist
     
     // GET /watchlist
     if (path === '/watchlist' && method === 'GET') {
@@ -540,7 +537,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== WATCHED ====================
+    // watched
     
     // GET /watched
     if (path === '/watched' && method === 'GET') {
@@ -591,7 +588,7 @@ export const handler = async (event) => {
       };
     }
 
-// ==================== RATINGS (Via table watched) ====================
+// ratings via watched
     
     // GET /ratings/:id
     if (path.startsWith('/ratings/') && method === 'GET') {
@@ -639,7 +636,7 @@ export const handler = async (event) => {
         body: JSON.stringify({ message: 'Note supprimée' })
       };
     }
-    // ==================== LIKES ====================
+    // likes
     
     // GET /likes/:id
     if (path.startsWith('/likes/') && path !== '/likes/all' && method === 'GET') {
@@ -706,7 +703,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== FRIENDS ====================
+    // friends
 
     // GET /friends - Liste des amis acceptés
     if (path === '/friends' && method === 'GET') {
@@ -842,7 +839,7 @@ export const handler = async (event) => {
       // On attend exactement 6 chiffres
       if (!query || query.length !== 6) {
         return {
-          statusCode: 200, // On renvoie une liste vide pas une erreur (plus propre pour l'UI)
+          statusCode: 200,
           headers,
           body: JSON.stringify([])
         };
@@ -942,7 +939,6 @@ export const handler = async (event) => {
         (SELECT COALESCE(AVG(rating)::numeric(10,1), 0) FROM watched WHERE user_id = ${targetUserId} AND rating IS NOT NULL) as average_rating
     `;
     
-    // ✅ CORRECTION : Récupérer seulement les IDs des films likés
     const likes = await sql`
       SELECT movie_id FROM likes 
       WHERE user_id = ${targetUserId}
@@ -980,7 +976,7 @@ export const handler = async (event) => {
         is_friend: isFriend,
         friendship_status: friendshipStatus,
         stats: stats[0],
-        likes: likes.map(l => l.movie_id), // ✅ Renvoyer juste les IDs
+        likes: likes.map(l => l.movie_id),
         watchlist: watchlist,
         watched: watched
       })
@@ -1043,7 +1039,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ==================== REVIEWS ====================
+    //reviexs
     
     // GET /reviews/:id
     if (path.startsWith('/reviews/') && method === 'GET') {

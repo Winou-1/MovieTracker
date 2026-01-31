@@ -1,4 +1,3 @@
-// Enregistrer le Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         registerServiceWorker();
@@ -11,7 +10,6 @@ async function registerServiceWorker() {
             scope: '/'
         });
 
-        console.log('✓ Service Worker enregistré:', registration.scope);
         registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             
@@ -106,7 +104,7 @@ window.reloadApp = function() {
     window.location.reload();
 };
 
-// Vider le cache manuellement (pour debugging)
+// Vider le cache manuellement
 window.clearAppCache = async function() {
     if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
@@ -122,6 +120,5 @@ window.clearAppCache = async function() {
         );
     }
     
-    console.log('✓ Cache vidé');
     window.location.reload();
 };

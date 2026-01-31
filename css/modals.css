@@ -1,5 +1,4 @@
 
-/* ==================== MODALS ==================== */
 .modal {
     display: none;
     position: fixed;
@@ -70,7 +69,6 @@
     font-weight: 700;
 }
 
-/* ==================== FORMS ==================== */
 .form-group {
     margin-bottom: 24px;
 }
@@ -107,7 +105,6 @@
 }
 
 
-/* ==================== MOVIE DETAILS ==================== */
 .movie-details-grid {
     display: grid;
     grid-template-columns: 250px 1fr;
@@ -192,7 +189,7 @@
     margin-top: 24px;
 }
 
-/* --- Style de base commun --- */
+/*Style de base commun*/
 .movie-actions .btn {
     flex: 1;
     border-width: 2px;
@@ -206,7 +203,6 @@
     gap: 8px;
     transition: all 0.3s ease;
     cursor: pointer;
-    /* Ombre portée légère */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -216,7 +212,7 @@
 
 
 
-/* ==================== MODAL CROPPER AVATAR - RESPONSIVE ==================== */
+/*cropper avatar*/
 #cropperModal {
     display: none;
     position: fixed;
@@ -240,7 +236,7 @@
 #cropperModal .modal-content {
     max-width: 500px;
     width: 100%;
-    max-height: calc(100vh - 32px); /* Hauteur maximale = viewport - padding */
+    max-height: calc(100vh - 32px);
     padding: 0;
     overflow: hidden;
     background: #000;
@@ -250,10 +246,9 @@
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8);
 }
 
-/* Container de l'image avec limite de hauteur */
 #cropperModal .cropper-container-wrapper {
     width: 100%;
-    max-height: calc(100vh - 120px); /* Viewport - padding - footer */
+    max-height: calc(100vh - 120px);
     overflow: hidden;
     background: #000;
     display: flex;
@@ -268,7 +263,6 @@
     object-fit: contain;
 }
 
-/* Footer avec boutons */
 #cropperModal .cropper-footer {
     padding: 12px 16px;
     background: #1f2327;
@@ -317,7 +311,6 @@
     transform: translateY(0);
 }
 
-/* Responsive Mobile */
 @media (max-width: 768px) {
     #cropperModal {
         padding: 8px;
@@ -341,7 +334,6 @@
     }
 }
 
-/* Ajustements pour les très petits écrans */
 @media (max-width: 480px) {
     #cropperModal .cropper-container-wrapper {
         max-height: calc(100vh - 80px);
@@ -358,7 +350,6 @@
     }
 }
 
-/* Style pour Cropper.js */
 .cropper-view-box,
 .cropper-face {
     border-radius: 50%;
@@ -378,7 +369,6 @@
     background-color: #000;
 }
 
-/* Assurer que le container Cropper ne dépasse pas */
 .cropper-container {
     max-height: 100% !important;
 }

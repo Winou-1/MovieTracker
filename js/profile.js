@@ -12,85 +12,57 @@ let profileData = {
     }
 };
 
-// ==================== INITIALISATION ====================
-
 async function initProfile() {
-    console.log('🎬 Init Profile - Début');
     
     if (!getToken()) {
-        console.log('⚠️ Pas de token, redirection');
         switchView('movies');
         openAuthModal(true);
         return;
     }
-
-    // ✅ D'abord afficher le profil avec les données disponibles
     renderProfile();
-    console.log('📄 Premier render du profil');
-
     try {
-        // ✅ Charger toutes les données en parallèle
-        console.log('🔄 Chargement des données profil...');
-        
         await Promise.all([
             loadUserProfile().catch(err => {
-                console.error('❌ Erreur loadUserProfile:', err);
+                console.error('Erreur loadUserProfile:', err);
                 return null;
             }),
             loadUserStats().catch(err => {
-                console.error('❌ Erreur loadUserStats:', err);
+                console.error('Erreur loadUserStats:', err);
                 return null;
             }),
             loadLikedMovies().catch(err => {
-                console.error('❌ Erreur loadLikedMovies:', err);
+                console.error('Erreur loadLikedMovies:', err);
                 return [];
             }),
             loadWatchlistMovies().catch(err => {
-                console.error('❌ Erreur loadWatchlistMovies:', err);
+                console.error('Erreur loadWatchlistMovies:', err);
                 return [];
             }),
             loadWatchedMovies().catch(err => {
-                console.error('❌ Erreur loadWatchedMovies:', err);
+                console.error('Erreur loadWatchedMovies:', err);
                 return [];
             })
         ]);
-
-        console.log('✅ Données chargées:', {
-            user: !!profileData.user,
-            stats: Object.keys(profileData.stats).length,
-            liked: profileData.likedMovies?.length || 0,
-            watchlist: profileData.watchlistMovies?.length || 0,
-            watched: profileData.watchedMovies?.length || 0
-        });
-
-        // ✅ Rafraîchir l'affichage avec toutes les données
         renderProfile();
-        console.log('✅ Profil rechargé avec toutes les données');
-        
     } catch (error) {
-        console.error('❌ Erreur chargement profil:', error);
-        // ✅ Afficher le profil même en cas d'erreur (mode dégradé)
         renderProfile();
     }
 }
 
-// ==================== CHARGEMENT PROFIL ====================
 
 async function loadUserProfile() {
     try {
         let data = null;
-        
-        // ✅ CACHE-FIRST
+        // on commance par le cache
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
             data = await OfflineStorage.getProfile();
             if (data) {
-                console.log('⚡ Profil depuis cache');
                 profileData.user = data;
                 renderProfile();
             }
         }
         
-        // ✅ Sync serveur en parallèle
+        // Sync serveur en parallèle
         if (navigator.onLine) {
             try {
                 const freshData = await apiRequest('/profile');
@@ -104,16 +76,13 @@ async function loadUserProfile() {
                             updated_at: new Date().toISOString()
                         });
                     }
-                    
-                    // Si différent du cache, re-render
                     if (JSON.stringify(data) !== JSON.stringify(freshData)) {
                         profileData.user = freshData;
                         renderProfile();
-                        console.log('🔄 Profil mis à jour depuis serveur');
                     }
                 }
             } catch (apiError) {
-                console.warn('⚠️ Erreur API profil, utilisation du cache');
+                console.warn('Erreur API profil, utilisation du cache');
             }
         }
         
@@ -125,22 +94,19 @@ async function loadUserProfile() {
     }
 }
 
-// ==================== CHARGEMENT STATS ====================
-
 async function loadUserStats() {
     try {
         let stats = null;
         let watchedData = null;
         
-        // ✅ CACHE-FIRST
+        // on commance par le cache
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
             watchedData = await OfflineStorage.getWatched();
             if (watchedData && watchedData.length > 0) {
-                console.log('⚡ Stats depuis cache (' + watchedData.length + ' films vus)');
             }
         }
         
-        // ✅ Sync serveur
+        // Sync serveur
         if (navigator.onLine) {
             try {
                 const freshStats = await apiRequest('/stats');
@@ -150,10 +116,7 @@ async function loadUserStats() {
                 
                 if (freshWatched && freshWatched.length > 0) {
                     watchedData = freshWatched;
-                    
-                    // ✅ CORRECTION CRITIQUE : saveListWithDetails au lieu de saveWatchedWithDetails
                     if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
-                        // Ne pas bloquer le chargement, faire en arrière-plan
                         OfflineStorage.saveListWithDetails('watched', freshWatched).catch(err => {
                             console.warn('Erreur sauvegarde cache watched:', err);
                         });
@@ -164,7 +127,7 @@ async function loadUserStats() {
             }
         }
         
-        // ✅ Stats en mode offline/fallback
+        // Stats en mode offline
         if (!stats) {
             let watchlistData = [];
             let likesData = [];
@@ -182,7 +145,7 @@ async function loadUserStats() {
             };
         }
         
-        // ✅ Calcul des stats
+        // Calcul des stats
         profileData.stats = {
             rated_count: stats?.rated_count || 0,
             reviews_count: stats?.reviews_count || 0,
@@ -200,15 +163,13 @@ async function loadUserStats() {
             return watchedDate.getMonth() === currentMonth && 
                    watchedDate.getFullYear() === currentYear;
         }).length;
-
-        // Temps total (120min par film)
-        profileData.stats.total_hours = Math.round((profileData.stats.watched_count * 120) / 60);
+        profileData.stats.total_hours = await calculateRealWatchTimeOptimized(watchedData);
 
         return profileData.stats;
         
     } catch (error) {
         console.error('Erreur stats:', error);
-        // ✅ Stats par défaut au lieu de crash
+        // Stats par défaut au lieu de crash
         profileData.stats = {
             rated_count: 0,
             reviews_count: 0,
@@ -222,22 +183,102 @@ async function loadUserStats() {
     }
 }
 
-// ==================== CHARGEMENT LIKES ====================
+
+async function calculateRealWatchTime(watchedMovies) {
+    if (!watchedMovies || watchedMovies.length === 0) {
+        return 0;
+    }
+    let totalMinutes = 0;
+    let moviesWithRuntime = 0;
+    let moviesWithoutRuntime = 0;
+    const runtimeCache = {};
+    const getMovieRuntime = async (movieId) => {
+        if (runtimeCache[movieId]) {
+            return runtimeCache[movieId];
+        }
+        try {
+            const response = await fetch(
+                `${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
+            );
+            
+            if (!response.ok) {
+                console.warn(`Impossible de récupérer la durée du film ${movieId}`);
+                return 120;
+            }
+            const data = await response.json();
+            const runtime = data.runtime || 120;
+            runtimeCache[movieId] = runtime;
+            return runtime;
+            
+        } catch (error) {
+            console.warn(`Erreur récupération durée film ${movieId}:`, error);
+            return 120;
+        }
+    };
+    const batchSize = 10;
+    for (let i = 0; i < watchedMovies.length; i += batchSize) {
+        const batch = watchedMovies.slice(i, i + batchSize);
+        const runtimePromises = batch.map(async (movie) => {
+            if (movie.runtime && movie.runtime > 0) {
+                moviesWithRuntime++;
+                return movie.runtime;
+            }
+            const runtime = await getMovieRuntime(movie.movie_id);
+            if (runtime > 0 && runtime !== 120) {
+                moviesWithRuntime++;
+            } else {
+                moviesWithoutRuntime++;
+            }
+            return runtime;
+        });
+        const runtimes = await Promise.all(runtimePromises);
+        totalMinutes += runtimes.reduce((sum, runtime) => sum + runtime, 0);
+    }
+    const totalHours = Math.round(totalMinutes / 60);
+    return totalHours;
+}
+
+
+async function calculateRealWatchTimeOptimized(watchedMovies) {
+    if (!watchedMovies || watchedMovies.length === 0) {
+        return 0;
+    }
+    let quickTotal = watchedMovies.reduce((sum, movie) => {
+        return sum + (movie.runtime || 120);
+    }, 0);
+    
+    const quickHours = Math.round(quickTotal / 60);
+    if (profileData.stats) {
+        profileData.stats.total_hours = quickHours;
+        renderProfile();
+    }
+    calculateRealWatchTime(watchedMovies).then(realHours => {
+        if (profileData.stats && realHours !== quickHours) {
+            console.log('⏱️ Mise à jour temps réel:', quickHours, '→', realHours, 'heures');
+            profileData.stats.total_hours = realHours;
+            renderProfile();
+        }
+    }).catch(err => {
+        console.warn('⚠️ Erreur calcul temps réel, estimation conservée:', err);
+    });
+    
+    return quickHours;
+}
+
 
 async function loadLikedMovies() {
     try {
         let likes = null;
         
-        // ✅ CACHE-FIRST
+        // cache d'abord
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
             const cachedLikes = await OfflineStorage.getLikes();
             if (cachedLikes && cachedLikes.length > 0) {
                 likes = cachedLikes;
-                console.log('⚡ Likes depuis cache (' + likes.length + ')');
             }
         }
         
-        // ✅ Sync serveur
+        // Sync serveur
         if (navigator.onLine) {
             try {
                 const freshLikes = await apiRequest('/likes/all');
@@ -251,7 +292,7 @@ async function loadLikedMovies() {
                     }
                 }
             } catch (apiError) {
-                console.warn('⚠️ Erreur API likes');
+                console.warn('Erreur API likes');
             }
         }
         
@@ -260,7 +301,7 @@ async function loadLikedMovies() {
             return [];
         }
 
-        // ✅ Récupérer détails des 6 derniers
+        // Récupérer détails des 6 derniers
         const recentLikes = likes.slice(0, 6);
         const moviesPromises = recentLikes.map(async (like) => {
             try {
@@ -306,17 +347,12 @@ async function loadLikedMovies() {
     }
 }
 
-// ==================== CHARGEMENT WATCHLIST ====================
-
 async function loadWatchlistMovies() {
     try {
         let watchlist = null;
         
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
             watchlist = await OfflineStorage.getWatchlist();
-            if (watchlist && watchlist.length > 0) {
-                console.log('⚡ Watchlist profil depuis cache');
-            }
         }
         
         if (navigator.onLine) {
@@ -326,7 +362,7 @@ async function loadWatchlistMovies() {
                     watchlist = freshWatchlist;
                 }
             } catch (error) {
-                console.warn('⚠️ Erreur API watchlist');
+                console.warn('Erreur API watchlist');
             }
         }
         
@@ -349,7 +385,6 @@ async function loadWatchlistMovies() {
     }
 }
 
-// ==================== CHARGEMENT WATCHED ====================
 
 async function loadWatchedMovies() {
     try {
@@ -357,9 +392,6 @@ async function loadWatchedMovies() {
         
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
             watched = await OfflineStorage.getWatched();
-            if (watched && watched.length > 0) {
-                console.log('⚡ Watched profil depuis cache');
-            }
         }
         
         if (navigator.onLine) {
@@ -369,7 +401,7 @@ async function loadWatchedMovies() {
                     watched = freshWatched;
                 }
             } catch (error) {
-                console.warn('⚠️ Erreur API watched');
+                console.warn('Erreur API watched:', error);
             }
         }
         
@@ -382,9 +414,7 @@ async function loadWatchedMovies() {
         } else {
             profileData.watchedMovies = [];
         }
-        
         return profileData.watchedMovies;
-        
     } catch (error) {
         console.error('Erreur films vus:', error);
         profileData.watchedMovies = [];
@@ -398,11 +428,11 @@ function renderProfile() {
     const container = document.querySelector('.profile-content');
     if (!container) return;
 
-    // ✅ Vérifier que les données sont chargées
+    // Vérifier que les données sont chargées
     const user = profileData.user || {};
     const stats = profileData.stats || {};
     
-    // ✅ Valeurs par défaut si données manquantes
+    // Valeurs par défaut si données manquantes
     const username = user.username || state.userProfile?.username || state.user?.username || 'Utilisateur';
     const email = user.email || state.userProfile?.email || state.user?.email || 'email@exemple.com';
     const avatar = user.avatar || state.userProfile?.avatar || state.user?.avatar;
@@ -541,9 +571,10 @@ async function loadFriendsCount() {
         console.error('Erreur chargement nombre d\'amis:', error);
     }
 }
-// Rendre une section de films
+
+
+// Render une section de films
 function renderMoviesSection(title, movies, type) {
-    // ✅ Vérifier que movies existe et est un tableau
     const moviesList = Array.isArray(movies) ? movies : [];
     
     if (moviesList.length === 0) {
@@ -596,6 +627,7 @@ function renderMoviesSection(title, movies, type) {
         </div>
     `;
 }
+
 
 // Créer le modal de settings
 function createSettingsModal() {
@@ -801,7 +833,7 @@ function createSettingsModal() {
                             <div class="toggle-slider"></div>
                         </div>
                     </div>
-
+                            <!--
                      <div class="settings-option" id="setting-language">
                         <div class="settings-option-header">
                             <div class="settings-option-icon">
@@ -818,7 +850,7 @@ function createSettingsModal() {
                                 <polyline points="9 18 15 12 9 6"/>
                             </svg>
                         </div>
-                    </div>
+                    </div>-->
 
                     <!--<div class="settings-option settings-toggle">
                         <div class="settings-option-header">
@@ -852,7 +884,6 @@ function createSettingsModal() {
         </div>
     `;
     setTimeout(async () => {
-        // Vérifier que OfflineStorage existe avant de l'utiliser
         if (typeof OfflineStorage !== 'undefined') {
             const cacheSize = await OfflineStorage.getCacheSize();
             const cacheSizeElement = document.getElementById('cacheSize');
@@ -865,7 +896,6 @@ function createSettingsModal() {
     document.body.appendChild(modal);
     setupSettingsEvents();
     
-    // Charger la taille du cache après un court délai
     setTimeout(async () => {
         if (typeof OfflineStorage !== 'undefined') {
             const cacheSize = await OfflineStorage.getCacheSize();
@@ -1014,7 +1044,7 @@ async function saveNewUsername() {
     }
 }
 
-// ✅ Modifier l'avatar avec cropper
+// Modifier l'avatar avec cropper
 function editAvatar() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1127,10 +1157,9 @@ async function saveCroppedAvatar() {
     }
 }
 
-// 1. Fonction pour OUVRIR la modale (Style identique à editUsername)
+// Fonction pour ouvrir la modale
 function editEmail() {
     const currentEmail = profileData.user.email || '';
-    
     // Création dynamique de la modale
     const modal = document.createElement('div');
     modal.className = 'settings-modal active';
@@ -1168,8 +1197,6 @@ function editEmail() {
     
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
-    
-    // Focus automatique sur le champ
     setTimeout(() => {
         const input = document.getElementById('newEmailInput');
         if(input) {
@@ -1178,7 +1205,6 @@ function editEmail() {
         }
     }, 100);
     
-    // Support de la touche "Entrée"
     document.getElementById('newEmailInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             saveNewEmail();
@@ -1191,17 +1217,15 @@ async function saveNewEmail() {
     const newEmail = input.value.trim();
     const currentEmail = profileData.user.email;
 
-    // Vérification basique
     if (!newEmail || newEmail === currentEmail) {
         closeEmailModal();
         return;
     }
 
-    // Ta validation Regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
         showToast('Format d\'email invalide', 'error');
-        input.focus(); // On redonne le focus en cas d'erreur
+        input.focus();
         return;
     }
 
@@ -1230,7 +1254,7 @@ async function saveNewEmail() {
     }
 }
 
-// 3. Fonction pour FERMER la modale
+// Fonction pour FERMER la modale
 function closeEmailModal() {
     const modal = document.getElementById('emailEditModal');
     if (modal) {
@@ -1282,7 +1306,6 @@ if (document.readyState === 'loading') {
 } else {
     initProfile();
 }
-// ✅ REMPLACER LA FONCTION manualSync dans profile.js
 
 async function manualSync() {
     // Vérifier que OfflineStorage existe
@@ -1296,29 +1319,18 @@ async function manualSync() {
         return;
     }
     
-    console.log('🔄 DÉBUT SYNCHRONISATION MANUELLE');
     showToast('Synchronisation en cours...', 'info');
     
     try {
         // S'assurer que la DB est initialisée
         await OfflineStorage.init();
-        console.log('✅ DB initialisée');
-        
         await OfflineStorage.syncAllData();
-        console.log('✅ syncAllData terminé');
-        
-        // Mettre à jour l'affichage de la taille du cache
         const cacheSize = await OfflineStorage.getCacheSize();
-        console.log('📊 Taille cache:', cacheSize);
-        
+        //console.log('Taille cache:', cacheSize);
         const cacheSizeElement = document.getElementById('cacheSize');
         if (cacheSizeElement) {
             cacheSizeElement.textContent = cacheSize;
         }
-        
-        showToast('✅ Données synchronisées !', 'success');
-        
-        // Recharger la page pour voir les changements
         setTimeout(() => {
             if (state.currentView === 'profile') {
                 initProfile();
@@ -1326,7 +1338,7 @@ async function manualSync() {
         }, 1000);
         
     } catch (error) {
-        console.error('❌ Erreur sync complète:', error);
+        console.error('Erreur sync complète:', error);
         console.error('Stack:', error.stack);      
         // Si erreur liée aux stores
         if (error.name === 'NotFoundError' || 
@@ -1342,13 +1354,13 @@ async function manualSync() {
                 try {
                     showToast('Réinitialisation en cours...', 'info');
                     await OfflineStorage.resetDatabase();
-                    showToast('✅ Base réinitialisée !', 'success');
+                    showToast(' Base réinitialisée !', 'success');
                     
                     // Relancer la synchro après 2 secondes
                     setTimeout(async () => {
                         showToast('Synchronisation des données...', 'info');
                         await OfflineStorage.syncAllData();
-                        showToast('✅ Synchronisation terminée !', 'success');
+                        showToast(' Synchronisation terminée !', 'success');
                         
                         // Recharger le profil
                         if (state.currentView === 'profile') {
@@ -1357,7 +1369,7 @@ async function manualSync() {
                     }, 2000);
                     
                 } catch (resetError) {
-                    console.error('❌ Erreur reset:', resetError);
+                    console.error(' Erreur reset:', resetError);
                     showToast('Impossible de réinitialiser. Rechargez la page.', 'error');
                 }
             }
@@ -1370,7 +1382,6 @@ async function manualSync() {
 // Rendre la fonction accessible globalement
 window.manualSync = manualSync;
 
-// ✅ AJOUTER AUSSI : Fonction pour réinitialiser manuellement depuis les settings
 async function resetOfflineStorage() {
     if (typeof OfflineStorage === 'undefined') {
         showToast('Service non disponible', 'error');
@@ -1388,12 +1399,9 @@ async function resetOfflineStorage() {
     
     try {
         showToast('Réinitialisation...', 'info');
-        console.log('🗑️ Début du reset...');
         
         await OfflineStorage.resetDatabase();
-        
-        console.log('✅ Reset terminé');
-        showToast('✅ Cache réinitialisé !', 'success');
+        showToast(' Cache réinitialisé !', 'success');
         
         // Mettre à jour l'affichage
         const cacheSizeElement = document.getElementById('cacheSize');
@@ -1405,7 +1413,7 @@ async function resetOfflineStorage() {
         // Proposer de resynchroniser
         setTimeout(() => {
             const shouldSync = confirm(
-                '✅ Cache réinitialisé avec succès.\n\n' +
+                ' Cache réinitialisé avec succès.\n\n' +
                 'Voulez-vous synchroniser vos données maintenant ?'
             );
             
@@ -1415,7 +1423,7 @@ async function resetOfflineStorage() {
         }, 500);
         
     } catch (error) {
-        console.error('❌ Erreur reset:', error);
+        console.error('Erreur reset:', error);
         showToast('Erreur lors de la réinitialisation', 'error');
         
         // Si c'est bloqué, proposer de recharger la page

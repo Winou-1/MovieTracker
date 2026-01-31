@@ -1,4 +1,4 @@
-/* ==================== FILTERS SECTION ==================== */
+/*filtre*/
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -119,7 +119,7 @@
     padding: 12px;
 }
 
-/* Grid size slider */
+/*grid*/
 .grid-size-control {
     display: flex;
     flex-direction: column;
@@ -216,7 +216,7 @@
     margin-top: 8px;
 }
 
-/* Genre separators */
+/*genre séparateur*/
 .genre-separator {
     padding: 6px 0;
     border-top: 2px solid rgba(68, 85, 102, 0.3);
@@ -240,7 +240,6 @@
     border-radius: 2px;
 }
 
-/* Active filter indicator */
 .filter-btn.active {
     background: var(--primary);
     color: var(--bg-dark);
@@ -259,7 +258,6 @@
     animation: pulse 2s infinite;
 }
 
-/* Dynamic grid columns - FORCE THE NUMBER REGARDLESS OF SCREEN SIZE */
 .movies-grid.cols-3 { 
     grid-template-columns: repeat(3, 1fr) !important;
 }
@@ -279,7 +277,6 @@
     grid-template-columns: repeat(8, 1fr) !important;
 }
 
-/* Mobile adjustments */
 @media (max-width: 768px) {
     .section-header {
         flex-direction: row;

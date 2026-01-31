@@ -78,7 +78,6 @@ nav {
     gap: 12px;
 }
 
-/* ✅ USER MENU DESKTOP - CADRE AVEC NOM + AVATAR */
 #userMenu {
     display: flex;
     align-items: center;
@@ -92,8 +91,6 @@ nav {
 }
 
 #userMenu:hover {
-    /*background: rgba(59, 130, 246, 0.15);*/
-    /*border-color: rgba(59, 130, 246, 0.5);*/
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
@@ -105,7 +102,6 @@ nav {
     white-space: nowrap;
 }
 
-/* ✅ AVATAR ROND À DROITE */
 .user-avatar {
     width: 40px;
     height: 40px;
@@ -121,7 +117,6 @@ nav {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
 }
 
-/* Avatar par défaut (si pas d'image) */
 .user-avatar-placeholder {
     width: 40px;
     height: 40px;

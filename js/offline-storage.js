@@ -1,16 +1,12 @@
-// js/offline-storage.js - Système de cache IndexedDB CORRIGÉ
-
 const OfflineStorage = {
     DB_NAME: 'CineTrackDB',
-    DB_VERSION: 5, // ✅ Incrémenté pour ajouter user_ratings
+    DB_VERSION: 5,
     db: null,
     isInitializing: false,
 
-    // ✅ Initialisation sécurisée
     async init() {
         if (this.db) return this.db;
         if (this.isInitializing) {
-            // Attendre que l'init en cours se termine
             await new Promise(resolve => setTimeout(resolve, 100));
             return this.init();
         }
@@ -28,33 +24,29 @@ const OfflineStorage = {
             request.onsuccess = () => {
                 this.db = request.result;
                 this.isInitializing = false;
-                console.log('✅ IndexedDB initialisée (v' + this.DB_VERSION + ')');
+                //console.log('IndexedDB initialisée (v' + this.DB_VERSION + ')');
                 resolve(this.db);
             };
-
+            //création des stores
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                console.log('🔧 Migration IndexedDB v' + event.oldVersion + ' → v' + this.DB_VERSION);
+                //console.log(' Migration IndexedDB v' + event.oldVersion + ' → v' + this.DB_VERSION);
 
-                // ✅ Supprimer TOUS les anciens stores
                 const storeNames = Array.from(db.objectStoreNames);
                 storeNames.forEach(name => {
                     db.deleteObjectStore(name);
-                    console.log('🗑️ Store supprimé:', name);
                 });
 
-                // ✅ Créer les stores proprement
                 db.createObjectStore('watchlist', { keyPath: 'movie_id' });
                 db.createObjectStore('watched', { keyPath: 'movie_id' });
                 db.createObjectStore('likes', { keyPath: 'movie_id' });
-                db.createObjectStore('user_ratings', { keyPath: 'movie_id' }); // ✅ NOUVEAU : Store pour les notes
+                db.createObjectStore('user_ratings', { keyPath: 'movie_id' });
                 
                 const cacheStore = db.createObjectStore('movies_cache', { keyPath: 'movie_id' });
                 cacheStore.createIndex('cached_at', 'cached_at', { unique: false });
                 
                 db.createObjectStore('settings', { keyPath: 'key' });
 
-                console.log('✅ Tous les stores créés');
             };
         });
     },
@@ -74,18 +66,15 @@ const OfflineStorage = {
         }
     },
 
-    // ✅ SYNCHRONISATION OPTIMISÉE
     async syncAllData() {
         if (!this.isEnabled() || !getToken()) {
-            console.log('⚠️ Sync annulée (offline désactivé ou pas de token)');
             return;
         }
 
         try {
             await this.init();
-            console.log('🔄 Début synchronisation...');
 
-            // 1. Profil
+            // Profil
             const profile = await apiRequest('/profile');
             if (profile) {
                 await this.saveToStore('settings', {
@@ -93,44 +82,40 @@ const OfflineStorage = {
                     value: profile,
                     updated_at: new Date().toISOString()
                 });
-                console.log('✅ Profil sauvegardé');
             }
 
-            // 2. Watchlist avec détails
+            // Watchlist avec détails
             const watchlist = await apiRequest('/watchlist');
             if (watchlist && watchlist.length > 0) {
                 await this.saveListWithDetails('watchlist', watchlist);
             }
 
-            // 3. Films vus avec détails
+            // Films vus avec détails
             const watched = await apiRequest('/watched');
             if (watched && watched.length > 0) {
                 await this.saveListWithDetails('watched', watched);
             }
 
-            // 4. Likes avec détails
+            // Likes avec détails
             const likes = await apiRequest('/likes/all');
             if (likes && likes.length > 0) {
                 await this.saveLikesWithDetails(likes);
             }
 
-            // 5. Dernière sync
+            // Dernière sync
             await this.saveToStore('settings', {
                 key: 'last_sync',
                 value: new Date().toISOString()
             });
-
-            console.log('✅ Synchronisation terminée');
             
         } catch (error) {
-            console.error('❌ Erreur sync:', error);
+            console.error('Erreur sync:', error);
             throw error;
         }
     },
 
-    // ✅ NOUVELLE FONCTION : Sauvegarder avec gestion intelligente du cache
+    // Sauvegarder avec gestion intelligente du cache
     async saveListWithDetails(storeName, items) {
-        console.log(`📦 Sauvegarde ${items.length} éléments dans ${storeName}...`);
         
         await this.clearStore(storeName);
         
@@ -142,10 +127,7 @@ const OfflineStorage = {
             
             await Promise.all(batch.map(async (item) => {
                 try {
-                    // ✅ Vérifier le cache d'abord
                     let movieDetails = await this.getFromStore('movies_cache', item.movie_id);
-                    
-                    // Si pas en cache ou cache > 7 jours, refetch
                     if (!movieDetails || this.isCacheExpired(movieDetails.cached_at, 7)) {
                         const response = await fetch(
                             `${CONFIG.TMDB_BASE_URL}/movie/${item.movie_id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`
@@ -153,8 +135,6 @@ const OfflineStorage = {
                         
                         if (response.ok) {
                             const data = await response.json();
-                            
-                            // Sauvegarder dans le cache
                             movieDetails = {
                                 movie_id: item.movie_id,
                                 data: data,
@@ -164,23 +144,22 @@ const OfflineStorage = {
                             await this.saveToStore('movies_cache', movieDetails);
                         }
                     }
-                    
                     // Sauvegarder l'item avec détails
                     const itemToSave = {
                         movie_id: item.movie_id,
                         movie_title: item.movie_title,
                         movie_poster: item.movie_poster,
                         added_at: item.added_at || item.watched_at,
-                        rating: item.rating || null,                    // ✅ AJOUT : Note utilisateur
-                        watched_at: item.watched_at || item.added_at,  // ✅ AJOUT : Date de visionnage
+                        rating: item.rating || null,
+                        watched_at: item.watched_at || item.added_at,
                         details: movieDetails?.data ? {
                             title: movieDetails.data.title,
                             poster_path: movieDetails.data.poster_path,
                             release_date: movieDetails.data.release_date,
                             genres: movieDetails.data.genres,
-                            vote_average: movieDetails.data.vote_average,  // ✅ AJOUT : Note TMDB
-                            vote_count: movieDetails.data.vote_count,      // ✅ AJOUT : Nombre de votes
-                            runtime: movieDetails.data.runtime || 0        // ✅ AJOUT : Durée du film en minutes
+                            vote_average: movieDetails.data.vote_average,
+                            vote_count: movieDetails.data.vote_count,
+                            runtime: movieDetails.data.runtime || 0
                         } : null
                     };
                     
@@ -191,19 +170,13 @@ const OfflineStorage = {
                     console.error(`Erreur film ${item.movie_id}:`, error);
                 }
             }));
-            
-            console.log(`📊 Progression: ${saved}/${items.length}`);
         }
 
-        console.log(`✅ ${saved} films sauvegardés dans ${storeName}`);
+        //console.log(`- ${saved} films sauvegardés dans ${storeName}`);
     },
 
-    // ✅ Sauvegarder les likes
     async saveLikesWithDetails(likes) {
-        console.log(`📦 Sauvegarde ${likes.length} likes...`);
-        
         await this.clearStore('likes');
-        
         for (const like of likes) {
             try {
                 await this.saveToStore('likes', {
@@ -214,11 +187,8 @@ const OfflineStorage = {
                 console.error(`Erreur like ${like.movie_id}:`, error);
             }
         }
-
-        console.log(`✅ ${likes.length} likes sauvegardés`);
+        //console.log(`- ${likes.length} likes sauvegardés`);
     },
-
-    // ✅ Vérifier si le cache est expiré
     isCacheExpired(cachedAt, maxDays = 7) {
         if (!cachedAt) return true;
         const cacheAge = Date.now() - new Date(cachedAt).getTime();
@@ -226,7 +196,7 @@ const OfflineStorage = {
         return cacheAge > maxAge;
     },
 
-    // ✅ Opérations de base sécurisées
+    // Opérations de base sécurisées
     async saveToStore(storeName, data) {
         if (!this.db) await this.init();
 
@@ -295,7 +265,7 @@ const OfflineStorage = {
         });
     },
 
-    // ✅ Récupération des données
+    // Récupération des données
     async getWatchlist() {
         if (!this.isEnabled()) return null;
         try {
@@ -351,7 +321,7 @@ const OfflineStorage = {
         }
     },
 
-    // ✅ Nettoyage
+    // Nettoyage
     async clearAllData() {
         try {
             await this.init();
@@ -360,13 +330,12 @@ const OfflineStorage = {
             await this.clearStore('likes');
             await this.clearStore('movies_cache');
             await this.clearStore('settings');
-            console.log('🗑️ Cache offline vidé');
         } catch (error) {
             console.error('Erreur clearAllData:', error);
         }
     },
 
-    // ✅ Taille du cache (FIXÉE)
+    // Taille du cache
     async getCacheSize() {
         try {
             if (!navigator.storage || !navigator.storage.estimate) {
@@ -383,7 +352,7 @@ const OfflineStorage = {
         }
     },
 
-    // ✅ Santé du stockage
+    // Santé du stockage
     async getStorageHealth() {
         try {
             await this.init();
@@ -414,9 +383,8 @@ const OfflineStorage = {
         }
     },
 
-    // ✅ Reset complet de la DB
+    // Reset complet de la DB
     async resetDatabase() {
-        console.log('🔄 Réinitialisation complète...');
         
         if (this.db) {
             this.db.close();
@@ -427,10 +395,8 @@ const OfflineStorage = {
             const deleteRequest = indexedDB.deleteDatabase(this.DB_NAME);
             
             deleteRequest.onsuccess = async () => {
-                console.log('✅ Base supprimée');
                 try {
                     await this.init();
-                    console.log('✅ Base recréée');
                     resolve();
                 } catch (err) {
                     reject(err);
@@ -449,24 +415,22 @@ const OfflineStorage = {
     }
 };
 
-// ✅ Auto-sync quand on revient en ligne
 window.addEventListener('online', async () => {
     if (OfflineStorage.isEnabled() && getToken()) {
-        console.log('🌐 Connexion rétablie, synchronisation...');
         setTimeout(async () => {
             await OfflineStorage.syncAllData();
         }, 2000);
     }
 });
 
-// ✅ Auto-sync toutes les 30 minutes
+// Auto-sync toutes les 30 minutes
 setInterval(async () => {
     if (OfflineStorage.isEnabled() && getToken() && navigator.onLine) {
         await OfflineStorage.syncAllData();
     }
 }, 30 * 60 * 1000);
 
-// ✅ Initialisation au chargement
+// Initialisation au chargement
 document.addEventListener('DOMContentLoaded', async () => {
     if (OfflineStorage.isEnabled()) {
         await OfflineStorage.init();

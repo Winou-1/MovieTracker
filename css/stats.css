@@ -1,7 +1,6 @@
-/* ==================== STATS PAGE ==================== */
 .stats-page {
-    padding: 20px 16px 100px;
-    max-width: 1200px;
+    padding: 20px 16px 10px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
@@ -27,7 +26,7 @@
     margin: 0;
 }
 
-/* Stats Overview Grid */
+/*stats grid*/
 .stats-overview-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -63,6 +62,7 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 4px;
+    line-height: 1.2;
 }
 
 .stat-overview-label {
@@ -73,7 +73,7 @@
     letter-spacing: 0.5px;
 }
 
-/* Charts Grid */
+/*graph*/
 .stats-charts-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -83,9 +83,11 @@
 
 .stats-chart-card {
     background: var(--bg-card);
-    padding: 24px;
+    padding: 20px;
     border-radius: 16px;
     border: 1px solid rgba(68, 85, 102, 0.2);
+    position: relative;
+    overflow: hidden;
 }
 
 .stats-chart-title {
@@ -99,58 +101,22 @@
 }
 
 .stats-chart-card canvas {
-    max-height: 300px;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 300px !important;
 }
 
-/* Fun Stats */
-.stats-fun-section {
-    margin-bottom: 32px;
-}
-
-.stats-section-title {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 20px 0;
-    text-align: center;
-}
-
-.stats-fun-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-.stats-fun-card {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-    padding: 20px 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    text-align: center;
-}
-
-.stats-fun-emoji {
-    font-size: 32px;
-    margin-bottom: 12px;
-}
-
-.stats-fun-value {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--primary);
-    margin-bottom: 4px;
-}
-
-.stats-fun-label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.3;
-}
-
-/* Responsive Desktop */
 @media (min-width: 768px) {
     .stats-page {
-        padding: 40px 24px 100px;
+        padding: 40px 24px 10px;
+    }
+    
+    .stats-page-header h1 {
+        font-size: 40px;
+    }
+    
+    .stats-subtitle {
+        font-size: 16px;
     }
     
     .stats-overview-grid {
@@ -164,17 +130,215 @@
     }
     
     .stats-chart-card canvas {
-        max-height: 350px;
+        max-height: 350px !important;
     }
 }
 
-/* Responsive Mobile */
-@media (max-width: 480px) {
-    .stats-fun-grid {
-        grid-template-columns: 1fr;
+@media (min-width: 1024px) {
+    .stats-page {
+        padding: 50px 32px 10px;
     }
     
-    .stats-fun-card {
+    .stats-page-header h1 {
+        font-size: 48px;
+    }
+    
+    .stats-overview-grid {
+        gap: 20px;
+    }
+    
+    .stat-overview-card {
+        padding: 28px;
+    }
+    
+    .stat-overview-icon {
+        font-size: 48px;
+    }
+    
+    .stat-overview-value {
+        font-size: 40px;
+    }
+    
+    .stat-overview-label {
+        font-size: 13px;
+    }
+    
+    .stats-charts-grid {
+        gap: 28px;
+    }
+    
+    .stats-chart-card {
+        padding: 28px;
+    }
+    
+    .stats-chart-title {
+        font-size: 20px;
+    }
+    
+    .stats-chart-card canvas {
+        max-height: 400px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-page {
+        padding: 16px 12px 10px;
+    }
+    
+    .stats-page-header h1 {
+        font-size: 26px;
+    }
+    
+    .stats-subtitle {
+        font-size: 13px;
+    }
+    
+    .stats-overview-grid {
+        gap: 10px;
+    }
+    
+    .stat-overview-card {
         padding: 16px 12px;
     }
+    
+    .stat-overview-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+    
+    .stat-overview-value {
+        font-size: 26px;
+    }
+    
+    .stat-overview-label {
+        font-size: 10px;
+    }
+    
+    .stats-charts-grid {
+        gap: 16px;
+    }
+    
+    .stats-chart-card {
+        padding: 16px;
+    }
+    
+    .stats-chart-title {
+        font-size: 16px;
+    }
+    
+    .stats-chart-card canvas {
+        max-height: 250px !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .stats-page {
+        padding: 12px 8px 5px;
+    }
+    
+    .stats-page-header h1 {
+        font-size: 22px;
+    }
+    
+    .stats-overview-grid {
+        gap: 8px;
+    }
+    
+    .stat-overview-card {
+        padding: 12px 8px;
+    }
+    
+    .stat-overview-icon {
+        font-size: 24px;
+    }
+    
+    .stat-overview-value {
+        font-size: 22px;
+    }
+    
+    .stats-chart-card {
+        padding: 12px;
+    }
+    
+    .stats-chart-title {
+        font-size: 14px;
+    }
+    
+    .stats-chart-card canvas {
+        max-height: 220px !important;
+    }
+}
+
+/*loading*/
+.stats-loading {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+.stats-loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(59, 130, 246, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.stats-loading-text {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.stats-empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+.stats-empty-icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+    opacity: 0.5;
+}
+
+.stats-empty-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.stats-empty-text {
+    font-size: 16px;
+    margin-bottom: 24px;
+}
+
+/*oups*/
+.stats-error {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.stats-error-icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+}
+
+.stats-error-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ef4444;
+    margin-bottom: 12px;
+}
+
+.stats-error-text {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
 }

@@ -10,8 +10,8 @@ const state = {
     user: null,
     token: null,
     movies: [],
-    watchlist: [],  // ✅ S'assurer que c'est un tableau
-    watched: [],    // ✅ S'assurer que c'est un tableau
+    watchlist: [],
+    watched: [],
     currentView: 'movies',
     swiperMovies: [],
     swiperIndex: 0,
@@ -25,7 +25,6 @@ const state = {
         username: '',
         email: ''
     },
-    // ✅ AJOUT : Variables pour éviter le chargement infini
     watchlistLoading: false,
     watchlistPage: 1,
     watchlistAllMovies: [],
@@ -73,31 +72,19 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     try {
-        const response = await fetch(`${CONFIG.API_URL}${endpoint}`, {
-            ...options,
-            headers
-        });
-
-        // Vérifier si c'est une route publique
+        const response = await fetch(`${CONFIG.API_URL}${endpoint}`, {...options,headers});
         const isPublicRoute = PUBLIC_ROUTES.some(route => endpoint.startsWith(route));
-
-        // Si 401/403 ET ce n'est PAS une route publique = session expirée
         if ((response.status === 401 || response.status === 403) && !isPublicRoute) {
             clearToken();
             updateUI();
             showToast('Session expirée, veuillez vous reconnecter', 'error');
             return null;
         }
-
         return await response.json();
     } catch (error) {
         console.error('API Error:', error);
-        
-        // ✅ Si erreur réseau et mode offline activé, ne pas afficher d'erreur
         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled() && navigator.onLine) {
-            // ✅ ATTENDRE la fin de la synchro
             await OfflineStorage.syncAllData();
-            console.log('✅ Synchronisation terminée dans loadUserData');
         }
         
         return null;

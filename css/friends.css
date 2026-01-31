@@ -142,7 +142,7 @@
     transform: scale(1.05);
 }
 
-/* Friends who watched movie */
+/*amis qu'on vu le film*/
 .movie-friends-badge {
     display: flex;
     align-items: center;
@@ -180,7 +180,7 @@
     font-weight: 600;
 }
 
-/* Privacy settings */
+/* Private settings */
 .privacy-options {
     display: flex;
     flex-direction: column;

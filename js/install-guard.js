@@ -209,7 +209,6 @@ async function triggerInstall() {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-            console.log('✅ Installation acceptée');
             deferredPrompt = null;
             setTimeout(() => {
                 const overlay = document.getElementById('pwa-install-overlay');
@@ -219,8 +218,6 @@ async function triggerInstall() {
                     setTimeout(() => overlay.remove(), 300);
                 }
             }, 500);
-        } else {
-            console.log('❌ Installation refusée');
         }
     } else {
         instructions.classList.add('show');
@@ -232,12 +229,10 @@ async function triggerInstall() {
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    console.log('📲 beforeinstallprompt capturé');
 });
 
 // Détecter l'installation réussie
 window.addEventListener('appinstalled', () => {
-    console.log('✅ App installée avec succès');
     deferredPrompt = null;
     const overlay = document.getElementById('pwa-install-overlay');
     if (overlay) {
@@ -249,17 +244,11 @@ window.addEventListener('appinstalled', () => {
 
 // Initialisation au chargement
 (function init() {
-    console.log('🚀 Init PWA Guard');
-    console.log('📱 Mobile:', isMobile());
-    console.log('✅ Installée:', isPWAInstalled());
     if (isMobile() && !isPWAInstalled()) {
-        console.log('🛑 Affichage écran installation');
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', showInstallScreen);
         } else {
             showInstallScreen();
         }
-    } else {
-        console.log('✅ Chargement normal');
     }
 })();

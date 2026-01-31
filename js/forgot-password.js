@@ -1,20 +1,14 @@
-// forgot-password.js - Système de réinitialisation de mot de passe
 
-// ==================== MOT DE PASSE OUBLIÉ ====================
-
-// Ajouter un lien "Mot de passe oublié" dans le modal d'authentification
 function addForgotPasswordLink() {
     const authModal = document.getElementById('authModal');
-    if (!authModal) return;
+    if (!authModal)
+        return;
+    if (document.getElementById('forgotPasswordLink'))
+        return;
     
-    // Vérifier si le lien existe déjà
-    if (document.getElementById('forgotPasswordLink')) return;
-    
-    // Ne l'ajouter que si on est en mode login
-    // Vérifier si le champ username est caché (= mode login)
     const usernameGroup = document.getElementById('usernameGroup');
     if (usernameGroup && usernameGroup.style.display !== 'none') {
-        return; // On est en mode register, ne pas ajouter le lien
+        return; // pas en mode de register
     }
     
     const authFormContainer = document.getElementById('authFormContainer');
@@ -66,15 +60,13 @@ function addForgotPasswordLink() {
 
 // Ouvrir le modal de mot de passe oublié
 function openForgotPasswordModal() {
-    // Fermer le modal d'auth actuel
     document.getElementById('authModal').classList.remove('active');
-    // Créer ou afficher le modal de réinitialisation
     let forgotModal = document.getElementById('forgotPasswordModal');
     if (!forgotModal) {
         forgotModal = createForgotPasswordModal();
         document.body.appendChild(forgotModal);
     }
-    // Reset le formulaire
+    // clear
     document.getElementById('forgotEmail').value = '';
     document.getElementById('forgotError').style.display = 'none';
     document.getElementById('forgotSuccess').style.display = 'none';
@@ -82,15 +74,13 @@ function openForgotPasswordModal() {
 }
 
 function openForgotPasswordModalprofile() {
-    // Fermer le modal d'auth actuel
     document.getElementById('authModal').classList.remove('active');
-    // Créer ou afficher le modal de réinitialisation
     let forgotModal = document.getElementById('forgotPasswordModal');
     if (!forgotModal) {
         forgotModal = createForgotPasswordModal();
         document.body.appendChild(forgotModal);
     }
-    // Reset le formulaire
+    // clear
     document.getElementById('forgotEmail').value = profileData.user.email || '';
     document.getElementById('forgotError').style.display = 'none';
     document.getElementById('forgotSuccess').style.display = 'none';
@@ -133,14 +123,11 @@ function createForgotPasswordModal() {
             </div>
         </div>
     `;
-    
-    // Fermer au clic extérieur
     modal.onclick = (e) => {
         if (e.target === modal) {
             closeForgotPasswordModal();
         }
     };
-    
     return modal;
 }
 
@@ -177,21 +164,16 @@ async function sendPasswordResetEmail() {
         });
         
         if (response && !response.error) {
-            // Afficher le message de succès
             successDiv.innerHTML = `
                 <strong>✓ Email envoyé !</strong><br>
                 Si un compte existe avec <strong>${email}</strong>, un lien de réinitialisation a été envoyé.<br>
                 Vérifiez votre boîte de réception (ET VOS SPAMS).
             `;
             successDiv.style.display = 'block';
-            
-            // Vider le champ email
             document.getElementById('forgotEmail').value = '';
-            
-            // Mode DEV: Afficher le lien directement
+            // Mode DEV:
             if (response.devMode && response.resetLink) {
-                console.log('🔗 Lien de reset (DEV):', response.resetLink);
-                
+                //console.log('Lien de reset (DEV):', response.resetLink);
                 const devLink = document.createElement('div');
                 devLink.style.cssText = `
                     margin-top: 16px;
@@ -202,7 +184,7 @@ async function sendPasswordResetEmail() {
                     font-size: 12px;
                 `;
                 devLink.innerHTML = `
-                    <strong style="color: var(--primary);">🔧 Mode DEV</strong><br>
+                    <strong style="color: var(--primary);">Mode DEV</strong><br>
                     <a href="${response.resetLink}" style="color: var(--primary); word-break: break-all;">
                         ${response.resetLink}
                     </a>
@@ -239,9 +221,8 @@ window.backToLogin = function(e) {
     openAuthModal(true);
 };
 
-// ==================== PAGE DE RÉINITIALISATION ====================
+// page de réinitialisation via token
 
-// Vérifier si on est sur une page de reset (avec token dans l'URL)
 function checkResetToken() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -358,10 +339,7 @@ async function submitPasswordReset(token) {
         submitBtn.textContent = 'Réinitialiser le mot de passe';
     }
 }
-
-// ==================== CHANGEMENT DE MOT DE PASSE DANS LE PROFIL ====================
-
-// Fonction appelée depuis profile.js
+// dans profile.js
 window.editPassword = function() {
     openChangePasswordModal();
 };
@@ -487,24 +465,16 @@ async function submitPasswordChange() {
     }
 }
 
-// ==================== INITIALISATION ====================
-
-// Ajouter le lien au chargement
 document.addEventListener('DOMContentLoaded', () => {
     // Vérifier si on a un token de reset dans l'URL
     checkResetToken();
-    
-    // Observer les changements du modal d'auth pour ajouter le lien
     const observer = new MutationObserver(() => {
         const authModal = document.getElementById('authModal');
         const usernameGroup = document.getElementById('usernameGroup');
-        
-        // Ajouter le lien seulement si le modal est actif ET qu'on est en mode login
         if (authModal && authModal.classList.contains('active') && 
             usernameGroup && usernameGroup.style.display === 'none') {
             addForgotPasswordLink();
         } else {
-            // Retirer le lien si on passe en mode register
             const linkContainer = document.getElementById('forgotPasswordLinkContainer');
             if (linkContainer) {
                 linkContainer.remove();

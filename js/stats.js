@@ -1,271 +1,415 @@
-// stats.js - Page complète de statistiques avec Chart.js
+// ==================== STATS PAGE - VERSION AVEC ENRICHISSEMENT TMDB ====================
+
+const TMDB_API_KEY = 'f05382a7b84dc7c40d1965fb01e19f2b';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+// Cache pour les détails TMDB
+const movieDetailsCache = new Map();
 
 async function initStatsPage() {
-    console.log('📊 Initialisation page stats');
+    
+    const statsSection = document.getElementById('statsSection');
+    if (!statsSection) {
+        console.error('statsSection introuvable');
+        return;
+    }
+    
+    let statsContainer = statsSection.querySelector('.container');
+    if (!statsContainer) {
+        statsContainer = statsSection;
+    }
     
     if (!getToken()) {
-        document.getElementById('statsContainer').innerHTML = `
-            <div class="stats-empty">
-                <h3>Connecte-toi pour voir tes statistiques</h3>
+        statsContainer.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <div style="font-size: 72px; margin-bottom: 24px;">📊</div>
+                <h2 style="color: var(--text-primary); margin-bottom: 12px;">Connexion requise</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Vous devez être connecté pour voir vos statistiques</p>
+                <button onclick="openAuthModal(true)" class="btn">
+                    Se connecter
+                </button>
             </div>
         `;
         return;
     }
     
-    // Afficher un loader pendant le chargement
-    document.getElementById('statsContainer').innerHTML = `
-        <div style="display: flex; justify-content: center; align-items: center; height: 400px;">
-            <div class="loader"></div>
+    statsContainer.innerHTML = `
+        <div class="stats-page">
+            <!-- Bouton retour vers le profil -->
+            <div style="margin-bottom: 20px;">
+                <button onclick="switchView('profile')" style="
+                    background: rgba(68, 85, 102, 0.2);
+                    border: 1px solid rgba(68, 85, 102, 0.3);
+                    color: var(--text-primary);
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='rgba(68, 85, 102, 0.3)'" onmouseout="this.style.background='rgba(68, 85, 102, 0.2)'">
+                    ← Retour au profil
+                </button>
+            </div>
+            
+            <div class="stats-loading">
+                <div class="stats-loading-spinner"></div>
+                <p class="stats-loading-text">Chargement de vos statistiques...</p>
+                <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Enrichissement des données en cours...</p>
+            </div>
         </div>
     `;
     
     try {
-        // Charger les données - NE PAS appeler /ratings car il n'existe pas
-        const [watched, watchlist] = await Promise.all([
+        // Charger TOUTES les données nécessaires
+        const [watchedData, watchlistData, statsData] = await Promise.all([
             apiRequest('/watched'),
-            apiRequest('/watchlist')
+            apiRequest('/watchlist'),
+            apiRequest('/stats')
         ]);
         
-        const watchedMovies = watched || [];
-        const watchlistMovies = watchlist || [];
+        const watchedMovies = Array.isArray(watchedData) ? watchedData : [];
+        const watchlistMovies = Array.isArray(watchlistData) ? watchlistData : [];
+        const userStats = statsData || {};
         
-        // ✅ Extraire les notes depuis la table watched (colonne rating)
-        const userRatings = watchedMovies
-            .filter(m => m.rating && m.rating > 0)
-            .map(m => ({
-                movie_id: m.movie_id,
-                rating: m.rating
-            }));
+        if (typeof Chart === 'undefined') {
+            throw new Error('Chart.js non chargé');
+        }
         
-        console.log('📊 Données chargées:', {
-            watched: watchedMovies.length,
-            watchlist: watchlistMovies.length,
-            ratings: userRatings.length
-        });
+        const enrichedMovies = await enrichMoviesWithTMDB(watchedMovies, statsContainer);
         
-        // Analyser les données
-        const stats = analyzeUserStats(watchedMovies, watchlistMovies, userRatings);
+        renderStatsPage(statsContainer, enrichedMovies, watchlistMovies, userStats);
         
-        // Afficher les statistiques
-        displayStatsPage(stats, watchedMovies);
+        setTimeout(() => {
+            createStatsCharts(enrichedMovies);
+        }, 100);
         
     } catch (error) {
-        console.error('Erreur chargement stats:', error);
-        document.getElementById('statsContainer').innerHTML = `
-            <div class="stats-error">
-                <h3>❌ Erreur de chargement</h3>
-                <p>Impossible de charger les statistiques</p>
-                <button onclick="initStatsPage()" style="
-                    margin-top: 16px;
-                    padding: 12px 24px;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 600;
-                ">
-                    🔄 Réessayer
-                </button>
+        console.error('❌ Erreur stats:', error);
+        statsContainer.innerHTML = `
+            <div class="stats-page">
+                <div style="margin-bottom: 20px;">
+                    <button onclick="switchView('profile')" style="
+                        background: rgba(68, 85, 102, 0.2);
+                        border: 1px solid rgba(68, 85, 102, 0.3);
+                        color: var(--text-primary);
+                        padding: 10px 20px;
+                        border-radius: 10px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.background='rgba(68, 85, 102, 0.3)'" onmouseout="this.style.background='rgba(68, 85, 102, 0.2)'">
+                        ← Retour au profil
+                    </button>
+                </div>
+                
+                <div class="stats-error">
+                    <div class="stats-error-icon">📊</div>
+                    <h2 class="stats-error-title">Erreur</h2>
+                    <p class="stats-error-text">Impossible de charger vos statistiques</p>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px;">${error.message}</p>
+                    <button onclick="initStatsPage()" class="btn" style="margin-top: 24px;">
+                        Réessayer
+                    </button>
+                </div>
             </div>
         `;
     }
 }
 
-function analyzeUserStats(watched, watchlist, ratings) {
-    // Stats générales
-    const totalWatched = watched.length;
-    const totalWatchlist = watchlist.length;
-    const totalRated = ratings.length;
+async function enrichMoviesWithTMDB(movies, container) {
+    const batchSize = 10; // Traiter par lot de 10
+    const enrichedMovies = [];
     
-    // Note moyenne
-    const avgRating = ratings.length > 0 
-        ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
-        : 0;
-    
-    // Films par genre
-    const genreCounts = {};
-    watched.forEach(movie => {
-        if (movie.genres) {
-            movie.genres.forEach(genre => {
-                genreCounts[genre.name] = (genreCounts[genre.name] || 0) + 1;
-            });
+    for (let i = 0; i < movies.length; i += batchSize) {
+        const batch = movies.slice(i, i + batchSize);
+        const enrichedBatch = await Promise.all(
+            batch.map(movie => fetchMovieDetails(movie))
+        );
+        enrichedMovies.push(...enrichedBatch);
+        
+        // Mettre à jour la progression
+        const progress = Math.round((i / movies.length) * 100);
+        if (container) {
+            const loadingText = container.querySelector('.stats-loading-text');
+            if (loadingText) {
+                loadingText.textContent = `Enrichissement... ${i}/${movies.length} films (${progress}%)`;
+            }
         }
-    });
+    }
     
-    // Films par année
-    const yearCounts = {};
-    watched.forEach(movie => {
-        if (movie.release_date) {
-            const year = movie.release_date.substring(0, 4);
-            yearCounts[year] = (yearCounts[year] || 0) + 1;
-        }
-    });
-    
-    // Films par décennie
-    const decadeCounts = {};
-    watched.forEach(movie => {
-        if (movie.release_date) {
-            const year = parseInt(movie.release_date.substring(0, 4));
-            const decade = Math.floor(year / 10) * 10;
-            decadeCounts[`${decade}s`] = (decadeCounts[`${decade}s`] || 0) + 1;
-        }
-    });
-    
-    // Distribution des notes
-    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
-    ratings.forEach(r => {
-        ratingDistribution[Math.ceil(r.rating / 0.5)] = (ratingDistribution[Math.ceil(r.rating / 0.5)] || 0) + 1;
-    });
-    
-    // Durée totale (estimation)
-    const totalMinutes = watched.reduce((sum, movie) => {
-        return sum + (movie.runtime || 120); // 120min par défaut
-    }, 0);
-    const totalHours = Math.floor(totalMinutes / 60);
-    const totalDays = (totalHours / 24).toFixed(1);
-    
-    return {
-        totalWatched,
-        totalWatchlist,
-        totalRated,
-        avgRating,
-        genreCounts,
-        yearCounts,
-        decadeCounts,
-        ratingDistribution,
-        totalHours,
-        totalDays,
-        totalMinutes
-    };
+    return enrichedMovies;
 }
 
-function displayStatsPage(stats, watchedMovies) {
-    const container = document.getElementById('statsContainer');
+async function fetchMovieDetails(movie) {
+    // Vérifier le cache
+    if (movieDetailsCache.has(movie.movie_id)) {
+        return { ...movie, ...movieDetailsCache.get(movie.movie_id) };
+    }
+    
+    try {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/movie/${movie.movie_id}?api_key=${TMDB_API_KEY}&language=fr-FR`
+        );
+        
+        if (!response.ok) {
+            console.warn(` TMDB failed for movie ${movie.movie_id}`);
+            return movie;
+        }
+        
+        const details = await response.json();
+        
+        const enrichedData = {
+            genres: details.genres || [],
+            release_date: details.release_date || null,
+            runtime: details.runtime || 120
+        };
+        
+        // Mettre en cache
+        movieDetailsCache.set(movie.movie_id, enrichedData);
+        
+        return { ...movie, ...enrichedData };
+        
+    } catch (error) {
+        console.warn(` Erreur TMDB pour film ${movie.movie_id}:`, error);
+        return movie;
+    }
+}
+
+function renderStatsPage(container, watchedMovies, watchlistMovies, userStats) {
+    const totalWatched = watchedMovies.length;
+    const totalWatchlist = watchlistMovies.length;
+    
+    // Calculer le temps total (runtime en minutes)
+    const totalMinutes = watchedMovies.reduce((sum, movie) => {
+        const runtime = movie.runtime || 120;
+        return sum + runtime;
+    }, 0);
+    const totalHours = Math.round(totalMinutes / 60);
+    
+    // Calculer la note moyenne
+    const ratedMovies = watchedMovies.filter(m => {
+        const rating = m.rating || m.user_rating;
+        return rating && rating > 0;
+    });
+    
+    const avgRating = ratedMovies.length > 0
+        ? (ratedMovies.reduce((sum, m) => {
+            const rating = m.rating || m.user_rating;
+            return sum + parseFloat(rating);
+        }, 0) / ratedMovies.length).toFixed(1)
+        : '0.0';
+    
+    const popcornBowls = totalWatched;
+    const movieNights = Math.round(totalHours / 2.5);
+    const marathonDays = Math.round(totalHours / 24);
     
     container.innerHTML = `
         <div class="stats-page">
-            <!-- Header -->
-            <div class="stats-page-header">
-                <h1>📊 Mes Statistiques</h1>
-                <p class="stats-subtitle">Analyse complète de ton activité cinéma</p>
+            <!-- Bouton retour -->
+            <div style="margin-bottom: 20px;">
+                <button onclick="switchView('profile')" style="
+                    background: rgba(68, 85, 102, 0.2);
+                    border: 1px solid rgba(68, 85, 102, 0.3);
+                    color: var(--text-primary);
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='rgba(68, 85, 102, 0.3)'" onmouseout="this.style.background='rgba(68, 85, 102, 0.2)'">
+                    ← Retour au profil
+                </button>
             </div>
             
-            <!-- Stats principales -->
+            <div class="stats-page-header">
+                <h1>📊 Mes Statistiques</h1>
+                <p class="stats-subtitle">Analyse de votre activité cinématographique</p>
+            </div>
+
             <div class="stats-overview-grid">
                 <div class="stat-overview-card">
                     <div class="stat-overview-icon">🎬</div>
-                    <div class="stat-overview-value">${stats.totalWatched}</div>
-                    <div class="stat-overview-label">Films vus</div>
+                    <div class="stat-overview-value">${totalWatched}</div>
+                    <div class="stat-overview-label">Films Vus</div>
                 </div>
+                
                 <div class="stat-overview-card">
-                    <div class="stat-overview-icon">⭐</div>
-                    <div class="stat-overview-value">${stats.avgRating}</div>
-                    <div class="stat-overview-label">Note moyenne</div>
+                    <div class="stat-overview-icon">📋</div>
+                    <div class="stat-overview-value">${totalWatchlist}</div>
+                    <div class="stat-overview-label">En Attente</div>
                 </div>
+                
                 <div class="stat-overview-card">
                     <div class="stat-overview-icon">⏱️</div>
-                    <div class="stat-overview-value">${stats.totalHours}h</div>
-                    <div class="stat-overview-label">Temps total</div>
+                    <div class="stat-overview-value">${totalHours}h</div>
+                    <div class="stat-overview-label">Heures Visionnées</div>
+                </div>
+                
+                <div class="stat-overview-card">
+                    <div class="stat-overview-icon">⭐</div>
+                    <div class="stat-overview-value">${avgRating}</div>
+                    <div class="stat-overview-label">Note Moyenne</div>
                 </div>
                 <div class="stat-overview-card">
-                    <div class="stat-overview-icon">📌</div>
-                    <div class="stat-overview-value">${stats.totalWatchlist}</div>
-                    <div class="stat-overview-label">Watchlist</div>
+                    <div class="stat-overview-icon">⏱</div>
+                    <div class="stat-overview-value">${totalHours*60}</div>
+                    <div class="stat-overview-label">Minutes Visionnées</div>
+                </div>
+                <div class="stat-overview-card">
+                    <div class="stat-overview-icon">📺</div>
+                    <div class="stat-overview-value">${marathonDays}</div>
+                    ${marathonDays <= 1 ? '<div class="stat-overview-label">jour</div>' : '<div class="stat-overview-label">jours</div>'}
                 </div>
             </div>
-            
-            <!-- Graphiques -->
             <div class="stats-charts-grid">
-                <!-- Films par genre -->
                 <div class="stats-chart-card">
-                    <h3 class="stats-chart-title">🎭 Films par Genre</h3>
-                    <canvas id="genreChart"></canvas>
+                    <h3 class="stats-chart-title">🎭 Genres Préférés</h3>
+                    <canvas id="genresChart"></canvas>
                 </div>
                 
-                <!-- Distribution des notes -->
+                <div class="stats-chart-card">
+                    <h3 class="stats-chart-title">📅 Activité Mensuelle ${new Date().getFullYear()}</h3>
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+                
                 <div class="stats-chart-card">
                     <h3 class="stats-chart-title">⭐ Distribution des Notes</h3>
-                    <canvas id="ratingChart"></canvas>
+                    <canvas id="ratingsChart"></canvas>
                 </div>
                 
-                <!-- Films par décennie -->
                 <div class="stats-chart-card">
-                    <h3 class="stats-chart-title">📅 Films par Décennie</h3>
-                    <canvas id="decadeChart"></canvas>
-                </div>
-                
-                <!-- Évolution dans le temps -->
-                <div class="stats-chart-card">
-                    <h3 class="stats-chart-title">📈 Activité Mensuelle</h3>
-                    <canvas id="activityChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Stats fun -->
-            <div class="stats-fun-section">
-                <h2 class="stats-section-title">🎉 Stats Fun</h2>
-                <div class="stats-fun-grid">
-                    <div class="stats-fun-card">
-                        <div class="stats-fun-emoji">🍿</div>
-                        <div class="stats-fun-value">${Math.ceil(stats.totalWatched * 0.5)}kg</div>
-                        <div class="stats-fun-label">de popcorn imaginaire</div>
-                    </div>
-                    <div class="stats-fun-card">
-                        <div class="stats-fun-emoji">🌙</div>
-                        <div class="stats-fun-value">${stats.totalDays}</div>
-                        <div class="stats-fun-label">jours de visionnage</div>
-                    </div>
-                    <div class="stats-fun-card">
-                        <div class="stats-fun-emoji">🎯</div>
-                        <div class="stats-fun-value">${((stats.totalRated / stats.totalWatched) * 100).toFixed(0)}%</div>
-                        <div class="stats-fun-label">de films notés</div>
-                    </div>
+                    <h3 class="stats-chart-title">🎞️ Films par Décennie</h3>
+                    <canvas id="decadesChart"></canvas>
                 </div>
             </div>
         </div>
     `;
-    
-    // Créer les graphiques
-    createGenreChart(stats.genreCounts);
-    createRatingChart(stats.ratingDistribution);
-    createDecadeChart(stats.decadeCounts);
-    createActivityChart(watchedMovies);
 }
 
-function createGenreChart(genreCounts) {
-    const ctx = document.getElementById('genreChart');
-    if (!ctx) return;
+// Graphiques
+let statsCharts = {
+    genres: null,
+    monthly: null,
+    ratings: null,
+    decades: null
+};
+
+function createStatsCharts(watchedMovies) {
+    // Détruire les anciens graphiques
+    Object.values(statsCharts).forEach(chart => {
+        if (chart) chart.destroy();
+    });
     
-    // Top 8 genres
-    const sortedGenres = Object.entries(genreCounts)
+    createGenresChart(watchedMovies);
+    createMonthlyChart(watchedMovies);
+    createRatingsChart(watchedMovies);
+    createDecadesChart(watchedMovies);
+}
+
+function createGenresChart(watchedMovies) {
+    const genresCount = {};
+    
+    watchedMovies.forEach((movie, index) => {
+        const genres = movie.genres;
+        
+        if (Array.isArray(genres) && genres.length > 0) {
+            genres.forEach(genre => {
+                const genreName = genre.name || genre;
+                if (genreName) {
+                    genresCount[genreName] = (genresCount[genreName] || 0) + 1;
+                }
+            });
+        }
+    });
+
+    if (Object.keys(genresCount).length === 0) {
+        const ctx = document.getElementById('genresChart');
+        if (ctx) {
+            const parent = ctx.parentElement;
+            parent.innerHTML = `
+                <h3 class="stats-chart-title">🎭 Genres Préférés</h3>
+                <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                    <p style="font-size: 14px; margin-bottom: 8px;">Aucune donnée disponible</p>
+                    <p style="font-size: 12px; opacity: 0.7;">Les informations de genres sont en cours de chargement...</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    const sortedGenres = Object.entries(genresCount)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8);
-    
-    new Chart(ctx, {
-        type: 'doughnut',
+
+    const labels = sortedGenres.map(g => g[0]);
+    const data = sortedGenres.map(g => g[1]);
+
+    const ctx = document.getElementById('genresChart');
+    if (!ctx) return;
+
+    statsCharts.genres = new Chart(ctx, {
+        type: 'pie',
         data: {
-            labels: sortedGenres.map(g => g[0]),
+            labels: labels,
             datasets: [{
-                data: sortedGenres.map(g => g[1]),
+                data: data,
                 backgroundColor: [
-                    '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
-                    '#10b981', '#06b6d4', '#f97316', '#84cc16'
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(236, 72, 153, 0.8)',
+                    'rgba(251, 191, 36, 0.8)',
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(99, 102, 241, 0.8)'
                 ],
                 borderWidth: 2,
-                borderColor: '#1f2327'
+                borderColor: 'rgba(20, 24, 28, 0.8)'
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 1.2,
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
                         color: '#9ab',
-                        padding: 15,
-                        font: { size: 12 }
+                        font: { size: 11 },
+                        padding: 12,
+                        boxWidth: 12,
+                        boxHeight: 12
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 24, 28, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#9ab',
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} films (${percentage}%)`;
+                        }
                     }
                 }
             }
@@ -273,36 +417,74 @@ function createGenreChart(genreCounts) {
     });
 }
 
-function createRatingChart(ratingDistribution) {
-    const ctx = document.getElementById('ratingChart');
-    if (!ctx) return;
+function createRatingsChart(watchedMovies) {
+    const ratingsCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
     
-    new Chart(ctx, {
+    watchedMovies.forEach(movie => {
+        const rating = movie.rating || movie.user_rating;
+        if (rating && rating > 0 && rating <= 10) {
+            const roundedRating = Math.round(rating);
+            ratingsCount[roundedRating] = (ratingsCount[roundedRating] || 0) + 1;
+        }
+    });
+
+    const labels = Object.keys(ratingsCount).map(r => `${r}/10`);
+    const data = Object.values(ratingsCount);
+
+    const ctx = document.getElementById('ratingsChart');
+    if (!ctx) return;
+
+    statsCharts.ratings = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐', '⭐⭐⭐⭐⭐⭐', '⭐⭐⭐⭐⭐⭐⭐', '⭐⭐⭐⭐⭐⭐⭐⭐', '⭐⭐⭐⭐⭐⭐⭐⭐⭐', '⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐'],
+            labels: labels,
             datasets: [{
                 label: 'Nombre de films',
-                data: Object.values(ratingDistribution),
-                backgroundColor: '#fbbf24',
-                borderColor: '#f59e0b',
-                borderWidth: 2
+                data: data,
+                backgroundColor: 'rgba(255, 201, 73, 0.8)',
+                borderColor: 'rgba(231, 169, 26, 0.8)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 24, 28, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#9ab',
+                    borderColor: 'rgba(236, 72, 153, 0.5)',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { color: '#9ab' },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                    ticks: {
+                        color: '#9ab',
+                        font: { size: 11 },
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(68, 85, 102, 0.2)',
+                        drawBorder: false
+                    }
                 },
                 x: {
-                    ticks: { color: '#9ab' },
+                    ticks: {
+                        color: '#9ab',
+                        font: { size: 11 }
+                    },
                     grid: { display: false }
                 }
             }
@@ -310,41 +492,85 @@ function createRatingChart(ratingDistribution) {
     });
 }
 
-function createDecadeChart(decadeCounts) {
-    const ctx = document.getElementById('decadeChart');
+function createMonthlyChart(watchedMovies) {
+    const monthlyData = Array(12).fill(0);
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    
+    const currentYear = new Date().getFullYear();
+    
+    watchedMovies.forEach(movie => {
+        const dateStr = movie.added_at || movie.watched_at || movie.created_at || movie.date_added;
+        
+        if (dateStr) {
+            const date = new Date(dateStr);
+            
+            if (!isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+                const month = date.getMonth();
+                monthlyData[month]++;
+            }
+        }
+    });
+
+
+    const ctx = document.getElementById('monthlyChart');
     if (!ctx) return;
-    
-    const sortedDecades = Object.entries(decadeCounts)
-        .sort((a, b) => a[0].localeCompare(b[0]));
-    
-    new Chart(ctx, {
+
+    statsCharts.monthly = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: sortedDecades.map(d => d[0]),
+            labels: monthNames,
             datasets: [{
                 label: 'Films vus',
-                data: sortedDecades.map(d => d[1]),
-                borderColor: '#3b82f6',
+                data: monthlyData,
+                borderColor: 'rgba(59, 130, 246, 1)',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
                 fill: true,
                 tension: 0.4,
-                borderWidth: 3
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 24, 28, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#9ab',
+                    borderColor: 'rgba(59, 130, 246, 0.5)',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { color: '#9ab' },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                    ticks: {
+                        color: '#9ab',
+                        font: { size: 11 },
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(68, 85, 102, 0.2)',
+                        drawBorder: false
+                    }
                 },
                 x: {
-                    ticks: { color: '#9ab' },
+                    ticks: {
+                        color: '#9ab',
+                        font: { size: 11 }
+                    },
                     grid: { display: false }
                 }
             }
@@ -352,68 +578,106 @@ function createDecadeChart(decadeCounts) {
     });
 }
 
-function createActivityChart(watchedMovies) {
-    const ctx = document.getElementById('activityChart');
-    if (!ctx) return;
+function createDecadesChart(watchedMovies) {
+    const decadesCount = {};
     
-    // Compter les films par mois (basé sur watched_at)
-    const monthlyCounts = {};
-    const now = new Date();
-    
-    // Initialiser les 12 derniers mois
-    for (let i = 11; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyCounts[key] = 0;
-    }
-    
-    // Compter les films
-    watchedMovies.forEach(movie => {
-        if (movie.watched_at) {
-            const date = new Date(movie.watched_at);
-            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (monthlyCounts.hasOwnProperty(key)) {
-                monthlyCounts[key]++;
+    watchedMovies.forEach((movie, index) => {
+        const releaseDate = movie.release_date;
+        
+        if (releaseDate) {
+            let year;
+            
+            if (typeof releaseDate === 'number') {
+                year = releaseDate;
+            } else if (typeof releaseDate === 'string') {
+                if (releaseDate.includes('-')) {
+                    year = new Date(releaseDate).getFullYear();
+                } else {
+                    year = parseInt(releaseDate);
+                }
+            }
+            if (!isNaN(year) && year > 1900 && year < 2100) {
+                const decade = Math.floor(year / 10) * 10;
+                decadesCount[decade] = (decadesCount[decade] || 0) + 1;
             }
         }
     });
-    
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const labels = Object.keys(monthlyCounts).map(key => {
-        const [year, month] = key.split('-');
-        return `${months[parseInt(month) - 1]}`;
-    });
-    
-    new Chart(ctx, {
+
+    const sortedDecades = Object.entries(decadesCount)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+    if (sortedDecades.length === 0) {
+        const ctx = document.getElementById('decadesChart');
+        if (ctx) {
+            const parent = ctx.parentElement;
+            parent.innerHTML = `
+                <h3 class="stats-chart-title">🎞️ Films par Décennie</h3>
+                <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                    <p style="font-size: 14px; margin-bottom: 8px;">Aucune donnée disponible</p>
+                    <p style="font-size: 12px; opacity: 0.7;">Les données sont en cours de chargement...</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    const labels = sortedDecades.map(d => `${d[0]}s`);
+    const data = sortedDecades.map(d => d[1]);
+
+    const ctx = document.getElementById('decadesChart');
+    if (!ctx) return;
+
+    statsCharts.decades = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Films vus',
-                data: Object.values(monthlyCounts),
-                backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                borderColor: '#3b82f6',
+                data: data,
+                backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                borderColor: 'rgba(139, 92, 246, 1)',
                 borderWidth: 2,
-                borderRadius: 8
+                borderRadius: 8,
+                borderSkipped: false
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 24, 28, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#9ab',
+                    borderColor: 'rgba(139, 92, 246, 0.5)',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { 
+                    ticks: {
                         color: '#9ab',
-                        stepSize: 1
+                        font: { size: 11 },
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
                     },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
+                    grid: {
+                        color: 'rgba(68, 85, 102, 0.2)',
+                        drawBorder: false
+                    }
                 },
                 x: {
-                    ticks: { color: '#9ab' },
+                    ticks: {
+                        color: '#9ab',
+                        font: { size: 11 }
+                    },
                     grid: { display: false }
                 }
             }

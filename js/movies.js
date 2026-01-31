@@ -74,10 +74,6 @@ async function searchMovies(isScrollLoad = false) {
             state.isSearchMode = true;
             state.currentSearchQuery = query;
         }
-
-        // ✅ AMÉLIORATION : Recherche multi-langue avec tri par popularité
-        // 1. Recherche dans toutes les langues (sans paramètre language)
-        // 2. include_adult=false pour filtrer le contenu adulte
         const response = await fetch(
             `${CONFIG.TMDB_BASE_URL}/search/movie?api_key=${CONFIG.TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${state.searchPage}&include_adult=false`
         );
@@ -87,11 +83,7 @@ async function searchMovies(isScrollLoad = false) {
         if (typeof filterAdultContent === 'function') {
             newMovies = filterAdultContent(newMovies);
         }
-        
-        // ✅ TRI PAR POPULARITÉ : Les films les plus connus en premier
-        // TMDB retourne déjà un score de pertinence, mais on peut améliorer avec la popularité
         newMovies.sort((a, b) => {
-            // Critère principal : popularité (vote_count * vote_average)
             const scoreA = (a.vote_count || 0) * (a.vote_average || 0);
             const scoreB = (b.vote_count || 0) * (b.vote_average || 0);
             return scoreB - scoreA;
@@ -130,8 +122,6 @@ function displayMovies(movies, gridId, shouldAppend = false) {
 
     const isWatchlistGrid = gridId === 'watchlistGrid';
     const isWatchedGrid = gridId === 'watchedGrid';
-
-    // ✅ CORRECTION CRITIQUE : S'assurer que watchlist et watched sont des tableaux
     const watchlistArray = Array.isArray(state.watchlist) ? state.watchlist : [];
     const watchedArray = Array.isArray(state.watched) ? state.watched : [];
 
@@ -201,14 +191,11 @@ async function loadWatchlist(isLoadMore = false) {
         return;
     }
 
-    // ✅ CORRECTION CRITIQUE : Vérifier si déjà en cours
     if (state.watchlistLoading) {
-        console.log('⏸️ Chargement watchlist déjà en cours');
         return;
     }
     
     state.watchlistLoading = true;
-    console.log('🔄 Début loadWatchlist, isLoadMore:', isLoadMore);
 
     const grid = document.getElementById('watchlistGrid');
     
@@ -219,33 +206,24 @@ async function loadWatchlist(isLoadMore = false) {
     }
     
     try {
-        // ✅ Charger les données seulement si le tableau est vide
         if (state.watchlistAllMovies.length === 0) {
             let watchlist = null;
             let fromCache = false;
-            
-            // ✅ CACHE-FIRST
             if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
                 try {
                     watchlist = await OfflineStorage.getWatchlist();
                     if (watchlist && watchlist.length > 0) {
                         fromCache = true;
-                        console.log('⚡ Watchlist depuis cache (' + watchlist.length + ' films)');
                     }
                 } catch (cacheError) {
-                    console.warn('⚠️ Erreur cache watchlist:', cacheError);
+                    console.warn('Erreur cache watchlist:', cacheError);
                 }
             }
-            
-            // ✅ Sync serveur seulement si en ligne ET pas déjà en cache
             if (navigator.onLine && !fromCache) {
                 try {
                     const freshWatchlist = await apiRequest('/watchlist');
                     if (freshWatchlist && freshWatchlist.length > 0) {
                         watchlist = freshWatchlist;
-                        console.log('🌐 Watchlist depuis serveur (' + freshWatchlist.length + ' films)');
-                        
-                        // Mettre à jour le cache en arrière-plan
                         if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
                             OfflineStorage.saveListWithDetails('watchlist', freshWatchlist).catch(err => {
                                 console.warn('Erreur sauvegarde cache:', err);
@@ -254,7 +232,6 @@ async function loadWatchlist(isLoadMore = false) {
                     }
                 } catch (apiError) {
                     console.warn('⚠️ Erreur API watchlist:', apiError);
-                    // Si on n'a pas de cache ET erreur API, afficher vide
                     if (!watchlist) {
                         grid.innerHTML = '<div class="empty-state"><h3>Impossible de charger la watchlist</h3><p>Vérifiez votre connexion</p></div>';
                         state.watchlistLoading = false;
@@ -262,8 +239,6 @@ async function loadWatchlist(isLoadMore = false) {
                     }
                 }
             }
-            
-            // ✅ Si toujours pas de données, afficher vide
             if (!watchlist || watchlist.length === 0) {
                 grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
                 state.watchlistLoading = false;
@@ -271,19 +246,15 @@ async function loadWatchlist(isLoadMore = false) {
             }
 
             state.watchlist = watchlist;
-            
-            // ✅ Trier par date
+            // Trier par date
             const sortedWatchlist = watchlist.sort((a, b) => 
                 new Date(b.added_at) - new Date(a.added_at)
             );
-            
-            // ✅ ===== CORRECTION PRINCIPALE : Récupération complète des détails TMDB (avec runtime) =====
             state.watchlistAllMovies = await Promise.all(sortedWatchlist.map(async (w) => {
                 let tmdbRating = 0;
                 let runtime = 0;
                 let details = null;
-                
-                // ✅ Toujours charger depuis le cache movies pour avoir runtime
+                // Toujours charger depuis le cache movies pour avoir runtime(sinon ca fonctionne pas et jsp pk)
                 if (typeof OfflineStorage !== 'undefined') {
                     try {
                         const cached = await OfflineStorage.getFromStore('movies_cache', w.movie_id);
@@ -312,8 +283,8 @@ async function loadWatchlist(isLoadMore = false) {
                         release_date: details.release_date,
                         genres: details.genres || [],
                         added_at: w.added_at,
-                        tmdb_rating: tmdbRating,  // ✅ Note TMDB correctement récupérée
-                        runtime: runtime           // ✅ Durée du film en minutes
+                        tmdb_rating: tmdbRating,
+                        runtime: runtime
                     };
                 } else {
                     return {
@@ -324,20 +295,19 @@ async function loadWatchlist(isLoadMore = false) {
                         genres: [],
                         added_at: w.added_at,
                         tmdb_rating: 0,
-                        runtime: 0  // ✅ Durée du film en minutes
+                        runtime: 0 
                     };
                 }
             }));
             
-            // ✅ Afficher les statistiques pour debugging
-            const withTMDBRating = state.watchlistAllMovies.filter(m => m.tmdb_rating > 0);
-            const withRuntime = state.watchlistAllMovies.filter(m => m.runtime > 0);
-            console.log(`🎬 Notes TMDB dans watchlist: ${withTMDBRating.length}/${state.watchlistAllMovies.length}`);
-            console.log(`⏱️ Films avec durée dans watchlist: ${withRuntime.length}/${state.watchlistAllMovies.length}`);
+            //const withTMDBRating = state.watchlistAllMovies.filter(m => m.tmdb_rating > 0);
+            //const withRuntime = state.watchlistAllMovies.filter(m => m.runtime > 0);
+            //console.log(` Notes TMDB dans watchlist: ${withTMDBRating.length}/${state.watchlistAllMovies.length}`);
+            //console.log(` Films avec durée dans watchlist: ${withRuntime.length}/${state.watchlistAllMovies.length}`);
             
             state.watchlistWithDetails = state.watchlistAllMovies;
             
-            // ✅ Charger genres
+            // Charger genres
             const allGenres = new Set();
             state.watchlistAllMovies.forEach(movie => {
                 if (movie.genres && movie.genres.length > 0) {
@@ -362,7 +332,7 @@ async function loadWatchlist(isLoadMore = false) {
             }
         }
         
-        // ✅ Pagination
+        // Pagination
         const start = (state.watchlistPage - 1) * MOVIES_PER_PAGE;
         const end = start + MOVIES_PER_PAGE;
         const chunk = state.watchlistAllMovies.slice(start, end);
@@ -380,13 +350,12 @@ async function loadWatchlist(isLoadMore = false) {
         
         setupWatchlistInfiniteScroll();
         
-        console.log('✅ Watchlist chargée (' + chunk.length + ' films affichés)');
+        //console.log('Watchlist chargée (' + chunk.length + ' films affichés)');
     } catch (error) {
-        console.error('❌ Erreur loadWatchlist:', error);
+        console.error('Erreur loadWatchlist:', error);
         grid.innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3></div>';
     } finally {
         state.watchlistLoading = false;
-        console.log('🔓 watchlistLoading débloqué');
     }
 }
 
@@ -402,7 +371,6 @@ function setupWatchlistInfiniteScroll() {
         if (entries[0].isIntersecting && !state.watchlistLoading) {
             const totalPages = Math.ceil(state.watchlistAllMovies.length / MOVIES_PER_PAGE);
             if (state.watchlistPage < totalPages) {
-                console.log('📥 Chargement page', state.watchlistPage + 1, '/', totalPages);
                 state.watchlistPage++;
                 loadWatchlist(true);
             }
@@ -417,7 +385,6 @@ function setupWatchlistInfiniteScroll() {
     
     if (lastCard) {
         state.watchlistObserver.observe(lastCard);
-        console.log('👁️ Observer attaché sur carte', cards.length);
     }
 }
 
@@ -530,16 +497,12 @@ function applyWatchlistFilters() {
             case 'date-desc':
                 return (b.release_date || '0000-01-01').localeCompare(a.release_date || '0000-01-01');
             case 'runtime-desc':
-                // ✅ Tri par durée (plus long d'abord) - pour watchlist
                 return (b.runtime || 0) - (a.runtime || 0);
             case 'runtime-asc':
-                // ✅ Tri par durée (plus court d'abord) - pour watchlist
                 return (a.runtime || 0) - (b.runtime || 0);
             case 'tmdb-rating-desc':
-                // ✅ Tri par note TMDB (meilleure d'abord) - pour watchlist
                 return (b.tmdb_rating || 0) - (a.tmdb_rating || 0);
             case 'tmdb-rating-asc':
-                // ✅ Tri par note TMDB (moins bonne d'abord) - pour watchlist
                 return (a.tmdb_rating || 0) - (b.tmdb_rating || 0);
             case 'added-desc':
             default:
@@ -558,8 +521,6 @@ if (!state.watchedPage) state.watchedPage = 1;
 if (!state.watchedLoading) state.watchedLoading = false;
 if (!state.watchedAllMovies) state.watchedAllMovies = [];
 
-// Correction pour loadWatched - À remplacer dans movies.js ligne ~520-700
-
 async function loadWatched(isLoadMore = false) {
     if (!getToken()) {
         document.getElementById('watchedGrid').innerHTML = 
@@ -568,12 +529,10 @@ async function loadWatched(isLoadMore = false) {
     }
 
     if (state.watchedLoading) {
-        console.log('⏸️ Chargement watched déjà en cours');
         return;
     }
     
     state.watchedLoading = true;
-    console.log('🔄 Début loadWatched, isLoadMore:', isLoadMore);
 
     const grid = document.getElementById('watchedGrid');
     
@@ -591,13 +550,11 @@ async function loadWatched(isLoadMore = false) {
             if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
                 watched = await OfflineStorage.getWatched();
                 if (watched && watched.length > 0) {
-                    console.log('⚡ Films vus depuis cache (' + watched.length + ' films)');
                     fromCache = true;
                 }
             }
             
             if (!watched && navigator.onLine) {
-                console.log('🌐 Films vus depuis serveur');
                 watched = await apiRequest('/watched');
             }
             
@@ -608,20 +565,16 @@ async function loadWatched(isLoadMore = false) {
             }
 
             state.watched = watched;
-            
             const sortedWatched = watched.sort((a, b) => 
                 new Date(b.watched_at || b.added_at) - new Date(a.watched_at || a.added_at)
             );
-            
-            console.log('⭐ Extraction des notes utilisateur et TMDB...');
-            
-            // ✅ CORRECTION COMPLÈTE : Charger les notes TMDB et runtime depuis le cache
+
             state.watchedAllMovies = await Promise.all(sortedWatched.map(async (w) => {
                 let tmdbRating = 0;
                 let runtime = 0;
                 let details = null;
                 
-                // ✅ Toujours charger depuis le cache movies pour avoir runtime
+                // Toujours charger depuis le cache movies pour avoir runtim as i said c'est kaput sinon
                 if (typeof OfflineStorage !== 'undefined') {
                     try {
                         const cached = await OfflineStorage.getFromStore('movies_cache', w.movie_id);
@@ -650,9 +603,9 @@ async function loadWatched(isLoadMore = false) {
                         release_date: details.release_date,
                         genres: details.genres || [],
                         watched_at: w.watched_at || w.added_at,
-                        user_rating: w.rating || null,  // ✅ Note utilisateur depuis watched
-                        tmdb_rating: tmdbRating,        // ✅ Note TMDB depuis cache
-                        runtime: runtime                // ✅ Durée du film
+                        user_rating: w.rating || null,
+                        tmdb_rating: tmdbRating,
+                        runtime: runtime
                     };
                 } else {
                     return {
@@ -664,18 +617,17 @@ async function loadWatched(isLoadMore = false) {
                         watched_at: w.watched_at || w.added_at,
                         user_rating: w.rating || null,
                         tmdb_rating: 0,
-                        runtime: 0  // ✅ Durée du film
+                        runtime: 0 
                     };
                 }
             }));
             
-            // Compter les films avec notes
-            const withUserRating = state.watchedAllMovies.filter(m => m.user_rating !== null);
-            const withTMDBRating = state.watchedAllMovies.filter(m => m.tmdb_rating > 0);
-            const withRuntime = state.watchedAllMovies.filter(m => m.runtime > 0);
-            console.log(`⭐ Notes utilisateur: ${withUserRating.length}/${state.watchedAllMovies.length}`);
-            console.log(`🎬 Notes TMDB: ${withTMDBRating.length}/${state.watchedAllMovies.length}`);
-            console.log(`⏱️ Films avec durée: ${withRuntime.length}/${state.watchedAllMovies.length}`);
+            //const withUserRating = state.watchedAllMovies.filter(m => m.user_rating !== null);
+            //const withTMDBRating = state.watchedAllMovies.filter(m => m.tmdb_rating > 0);
+            //const withRuntime = state.watchedAllMovies.filter(m => m.runtime > 0);
+            //console.log(`Notes utilisateur: ${withUserRating.length}/${state.watchedAllMovies.length}`);
+            //console.log(`Notes TMDB: ${withTMDBRating.length}/${state.watchedAllMovies.length}`);
+            //console.log(`Films avec durée: ${withRuntime.length}/${state.watchedAllMovies.length}`);
             
             state.watchedWithDetails = state.watchedAllMovies;
             
@@ -721,13 +673,12 @@ async function loadWatched(isLoadMore = false) {
         
         setupWatchedInfiniteScroll();
         
-        console.log('✅ Films vus chargés (' + chunk.length + ' films affichés)');
+        //console.log('Films vus chargés (' + chunk.length + ' films affichés)');
     } catch (error) {
-        console.error('❌ Erreur loadWatched:', error);
+        console.error('Erreur loadWatched:', error);
         grid.innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3></div>';
     } finally {
         state.watchedLoading = false;
-        console.log('🔓 watchedLoading débloqué');
     }
 }
 function setupWatchedInfiniteScroll() {
@@ -742,7 +693,6 @@ function setupWatchedInfiniteScroll() {
         if (entries[0].isIntersecting && !state.watchedLoading) {
             const totalPages = Math.ceil(state.watchedAllMovies.length / MOVIES_PER_PAGE);
             if (state.watchedPage < totalPages) {
-                console.log('📥 Chargement page', state.watchedPage + 1, '/', totalPages);
                 state.watchedPage++;
                 loadWatched(true);
             }
@@ -757,7 +707,6 @@ function setupWatchedInfiniteScroll() {
     
     if (lastCard) {
         state.watchedObserver.observe(lastCard);
-        console.log('👁️ Observer attaché sur carte', cards.length);
     }
 }
 
@@ -909,22 +858,16 @@ function applyWatchedFilters() {
             case 'date-desc':
                 return (b.release_date || '0000-01-01').localeCompare(a.release_date || '0000-01-01');
             case 'user-rating-desc':
-                // ✅ Tri par note utilisateur (meilleure d'abord)
                 return (b.user_rating || 0) - (a.user_rating || 0);
             case 'user-rating-asc':
-                // ✅ Tri par note utilisateur (moins bonne d'abord)
                 return (a.user_rating || 0) - (b.user_rating || 0);
             case 'runtime-desc':
-                // ✅ Tri par durée (plus long d'abord)
                 return (b.runtime || 0) - (a.runtime || 0);
             case 'runtime-asc':
-                // ✅ Tri par durée (plus court d'abord)
                 return (a.runtime || 0) - (b.runtime || 0);
             case 'tmdb-rating-desc':
-                // ✅ Tri par note TMDB (meilleure d'abord)
                 return (b.tmdb_rating || 0) - (a.tmdb_rating || 0);
             case 'tmdb-rating-asc':
-                // ✅ Tri par note TMDB (moins bonne d'abord)
                 return (a.tmdb_rating || 0) - (b.tmdb_rating || 0);
             case 'added-desc':
             default:
@@ -954,7 +897,7 @@ function resetWatchlistFilters() {
 function resetWatchedFilters() {
     document.getElementById('watchedSortBy').value = 'added-desc';
     document.getElementById('watchedGenreFilter').value = 'all';
-    document.getElementById('watchedSearchInput').value = '';  // ← AJOUTER CETTE LIGNE
+    document.getElementById('watchedSearchInput').value = '';
     const isMobile = window.innerWidth <= 768;
     const defaultSize = isMobile ? 3 : 6;
     document.getElementById('watchedGridSize').value = defaultSize;
@@ -1048,8 +991,6 @@ function toggleSearch() {
     
     if (widget.classList.contains('active')) {
         input.focus();
-        
-        // Event listener pour la recherche en temps réel
         input.removeEventListener('input', handleFloatingSearch);
         input.addEventListener('input', handleFloatingSearch);
     } else {
@@ -1077,9 +1018,8 @@ function handleFloatingSearch() {
     }
 }
 
-// ==================== LOGIQUE DE RECHERCHE ====================
+//recherche
 
-// 1. Déclencher la recherche quand on appuie sur "Entrée"
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -1098,32 +1038,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-// ========================================
-// FONCTIONS DE MISE À JOUR DYNAMIQUE DES GRILLES
-// À ajouter à la fin de movies.js
-// ========================================
-
 /**
  * Met à jour dynamiquement la grille watchlist sans tout recharger
- * @param {number} movieId - ID du film
- * @param {string} action - 'add' ou 'remove'
- * @param {object} movieData - Données du film (title, poster_path)
+ * @param {number} movieId
+ * @param {string} action
+ * @param {object} movieData
  */
 async function updateWatchlistGrid(movieId, action, movieData = null) {
     const grid = document.getElementById('watchlistGrid');
     if (!grid) return;
     
-    console.log(`🔄 updateWatchlistGrid: ${action} film ${movieId}`);
     
     if (action === 'add' && movieData) {
-        // Vérifier si le film n'est pas déjà affiché
         const existingCard = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (existingCard) {
-            console.log('ℹ️ Film déjà dans la grille');
             return;
         }
-        
-        // Récupérer les détails complets du film depuis TMDB
         let movieDetails = null;
         try {
             const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
@@ -1133,8 +1063,7 @@ async function updateWatchlistGrid(movieId, action, movieData = null) {
         } catch (error) {
             console.error('Erreur chargement détails film:', error);
         }
-        
-        // Créer l'objet film avec tous les détails
+        // Créernfilm avec tous les détails
         const movie = {
             id: movieId,
             title: movieDetails?.title || movieData.title || 'Film',
@@ -1146,23 +1075,16 @@ async function updateWatchlistGrid(movieId, action, movieData = null) {
             added_at: new Date().toISOString()
         };
         
-        // Ajouter au state
         state.watchlistAllMovies = [movie, ...state.watchlistAllMovies];
         state.watchlistWithDetails = state.watchlistAllMovies;
         
         // Créer la carte HTML
         const movieCard = createMovieCard(movie, 'watchlist');
-        
-        // Vérifier si la grille est vide
         const emptyState = grid.querySelector('.empty-state');
         if (emptyState) {
             grid.innerHTML = '';
         }
-        
-        // Insérer au début de la grille avec animation
         grid.insertAdjacentHTML('afterbegin', movieCard);
-        
-        // Animation d'apparition
         const newCard = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (newCard) {
             newCard.style.opacity = '0';
@@ -1174,10 +1096,8 @@ async function updateWatchlistGrid(movieId, action, movieData = null) {
             });
         }
         
-        console.log('✅ Film ajouté à la grille watchlist');
         
     } else if (action === 'remove') {
-        // Retirer de la grille avec animation
         const card = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (card) {
             card.style.transition = 'all 0.3s ease';
@@ -1186,17 +1106,11 @@ async function updateWatchlistGrid(movieId, action, movieData = null) {
             
             setTimeout(() => {
                 card.remove();
-                
-                // Retirer du state
                 state.watchlistAllMovies = state.watchlistAllMovies.filter(m => m.id !== movieId);
                 state.watchlistWithDetails = state.watchlistAllMovies;
-                
-                // Si la grille est vide, afficher le message
                 if (state.watchlistAllMovies.length === 0) {
                     grid.innerHTML = '<div class="empty-state"><h3>Ta watchlist est vide</h3></div>';
                 }
-                
-                console.log('✅ Film retiré de la grille watchlist');
             }, 300);
         }
     }
@@ -1212,17 +1126,12 @@ async function updateWatchedGrid(movieId, action, movieData = null) {
     const grid = document.getElementById('watchedGrid');
     if (!grid) return;
     
-    console.log(`🔄 updateWatchedGrid: ${action} film ${movieId}`);
     
     if (action === 'add' && movieData) {
-        // Vérifier si le film n'est pas déjà affiché
         const existingCard = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (existingCard) {
-            console.log('ℹ️ Film déjà dans la grille');
             return;
         }
-        
-        // Récupérer les détails complets du film depuis TMDB
         let movieDetails = null;
         try {
             const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
@@ -1243,27 +1152,18 @@ async function updateWatchedGrid(movieId, action, movieData = null) {
             genres: movieDetails?.genres || [],
             tmdb_rating: movieDetails?.vote_average || 0,
             runtime: movieDetails?.runtime || 0,
-            rating: movieData.rating || null, // Note de l'utilisateur (si disponible)
+            rating: movieData.rating || null,
             watched_at: new Date().toISOString()
         };
-        
-        // Ajouter au state
         state.watchedAllMovies = [movie, ...state.watchedAllMovies];
         state.watchedWithDetails = state.watchedAllMovies;
-        
         // Créer la carte HTML
         const movieCard = createMovieCard(movie, 'watched');
-        
-        // Vérifier si la grille est vide
         const emptyState = grid.querySelector('.empty-state');
         if (emptyState) {
             grid.innerHTML = '';
         }
-        
-        // Insérer au début de la grille avec animation
         grid.insertAdjacentHTML('afterbegin', movieCard);
-        
-        // Animation d'apparition
         const newCard = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (newCard) {
             newCard.style.opacity = '0';
@@ -1275,10 +1175,8 @@ async function updateWatchedGrid(movieId, action, movieData = null) {
             });
         }
         
-        console.log('✅ Film ajouté à la grille watched');
         
     } else if (action === 'remove') {
-        // Retirer de la grille avec animation
         const card = grid.querySelector(`[data-movie-id="${movieId}"]`);
         if (card) {
             card.style.transition = 'all 0.3s ease';
@@ -1287,17 +1185,12 @@ async function updateWatchedGrid(movieId, action, movieData = null) {
             
             setTimeout(() => {
                 card.remove();
-                
-                // Retirer du state
                 state.watchedAllMovies = state.watchedAllMovies.filter(m => m.id !== movieId && m.movie_id !== movieId);
                 state.watchedWithDetails = state.watchedAllMovies;
-                
-                // Si la grille est vide, afficher le message
                 if (state.watchedAllMovies.length === 0) {
                     grid.innerHTML = '<div class="empty-state"><h3>Tu n\'as encore vu aucun film</h3></div>';
                 }
                 
-                console.log('✅ Film retiré de la grille watched');
             }, 300);
         }
     }
@@ -1341,7 +1234,6 @@ function createMovieCard(movie, type) {
         tmdbRatingHTML = `<div class="movie-tmdb-rating">⭐ ${movie.tmdb_rating.toFixed(1)}/10</div>`;
     }
     
-    // Note utilisateur (seulement pour watched)
     let userRatingHTML = '';
     if (type === 'watched' && movie.rating) {
         const stars = '⭐'.repeat(Math.ceil(movie.rating / 2));
@@ -1358,14 +1250,13 @@ function createMovieCard(movie, type) {
                 ${runtimeHTML}
                 ${tmdbRatingHTML}
                 ${userRatingHTML}
-            </div>
+            </div>  
         </div>
     `;
 }
 
-// Exporter les fonctions pour qu'elles soient accessibles globalement
+// golbal fonctions export
 window.updateWatchlistGrid = updateWatchlistGrid;
 window.updateWatchedGrid = updateWatchedGrid;
 window.createMovieCard = createMovieCard;
 
-console.log('✅ Fonctions de mise à jour dynamique chargées');

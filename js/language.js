@@ -1,6 +1,3 @@
-// language.js - Système de gestion multilingue
-
-// Dictionnaire de traductions
 const translations = {
     fr: {
         // Navigation
@@ -560,12 +557,9 @@ function closeLanguageModal() {
 function selectLanguage(lang) {
     changeLanguage(lang);
     closeLanguageModal();
-    
-    // Fermer le modal de settings si ouvert
     const settingsModal = document.getElementById('settingsModal');
     if (settingsModal && settingsModal.classList.contains('active')) {
         setTimeout(() => {
-            // Recréer le modal de settings pour mettre à jour les textes
             closeSettings();
             setTimeout(() => {
                 createSettingsModal();
@@ -574,15 +568,11 @@ function selectLanguage(lang) {
         }, 300);
     }
 }
-
-// Exposer les fonctions globalement
 window.t = t;
 window.changeLanguage = changeLanguage;
 window.openLanguageModal = openLanguageModal;
 window.closeLanguageModal = closeLanguageModal;
 window.selectLanguage = selectLanguage;
-
-// Initialiser la langue au chargement
 document.addEventListener('DOMContentLoaded', () => {
     updateUILanguage();
 });

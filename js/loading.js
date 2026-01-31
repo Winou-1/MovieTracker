@@ -44,14 +44,14 @@
     }
 })();
 
-// Dans loading.js ou un fichier séparé
+// Mettre à jour l'indicateur offline
 function updateOfflineIndicator() {
     const indicator = document.getElementById('offlineIndicator');
     if (!indicator) return;
     
     if (!navigator.onLine) {
         indicator.style.display = 'block';
-        indicator.textContent = '📡 Mode Offline - Données en cache';
+        indicator.textContent = 'Mode Offline - Données en cache';
     } else {
         indicator.style.display = 'none';
     }

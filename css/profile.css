@@ -102,7 +102,7 @@
     transform: rotate(90deg);
 }
 
-/* Stats Grid Moderne */
+/* Stats Grid*/
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -326,7 +326,7 @@
     max-width: 110px;
 }
 
-/* Empty State */
+/*Quand ta r*/
 .profile-empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -615,7 +615,7 @@
     transform: translateY(0);
 }
 
-/* Toggle Switch */
+
 .settings-toggle {
     display: flex;
     align-items: center;
@@ -678,7 +678,7 @@
     transform: translateY(-2px);
 }
 
-/* Responsive Desktop */
+
 @media (min-width: 768px) {
     .profile-content {
         max-width: 1200px;
@@ -723,7 +723,7 @@
     }
 }
 
-/* Loading Skeleton */
+
 .skeleton {
     background: linear-gradient(90deg, rgba(68, 85, 102, 0.1) 25%, rgba(68, 85, 102, 0.2) 50%, rgba(68, 85, 102, 0.1) 75%);
     background-size: 200% 100%;
@@ -748,7 +748,7 @@
 }
 
 
-/* ==================== BOUTON AMIS DANS LE HEADER ==================== */
+/*bouton amis*/
 .profile-header-actions {
     position: absolute;
     top: 20px;

@@ -28,15 +28,10 @@ if (!state.seenMovieIds) {
     state.seenMovieIds = new Set();
 }
 
-// ✅ CORRECTION : Désactivation temporaire de la fonctionnalité "amis qui ont vu le film"
-// Cette fonction sera réactivée une fois l'endpoint backend créé
 async function getFriendsWhoLikedMovie(movieId) {
-    // ❌ TEMPORAIREMENT DÉSACTIVÉ - endpoint /movies/{id}/friends-activity non disponible
-    // Retourner un tableau vide pour éviter les erreurs 404
-    console.log(`ℹ️ getFriendsWhoLikedMovie désactivé pour le film ${movieId}`);
     return [];
     
-    /* 📝 CODE ORIGINAL À RÉACTIVER PLUS TARD :
+    /*  on laisse com ac pour le moment :
     if (!getToken()) return [];
     
     try {
@@ -77,14 +72,12 @@ async function loadSwiperMovies() {
     const watchlistMovies = await apiRequest('/watchlist');
     const watchlistIds = watchlistMovies ? watchlistMovies.map(m => m.movie_id) : [];
     
-    // Ajouter les IDs à notre cache global
+    // Ajouter les IDs au cache global
     watchedIds.forEach(id => state.seenMovieIds.add(id));
     watchlistIds.forEach(id => state.seenMovieIds.add(id));
-    
     const watchedCount = watchedMovies ? watchedMovies.length : 0;
     const recommendationPhase = getRecommendationPhase(watchedCount);
-    
-    console.log(`🎯 Phase: ${recommendationPhase} | ${watchedCount} vus | ${state.seenMovieIds.size} total exclus`);
+    //console.log(`Phase: ${recommendationPhase} | ${watchedCount} vus | ${state.seenMovieIds.size} total exclus`);
 
     try {
         let allMovies = [];
@@ -104,7 +97,7 @@ async function loadSwiperMovies() {
         // Filtrer avec le cache global
         const filteredMovies = allMovies.filter(m => !state.seenMovieIds.has(m.id));
         
-        console.log(`📦 ${allMovies.length} films chargés → ${filteredMovies.length} après filtrage`);
+        //console.log(`${allMovies.length} films chargés → ${filteredMovies.length} après filtrage`);
         
         if (state.swiperIndex === 0) {
             state.swiperMovies = filteredMovies;
@@ -115,7 +108,6 @@ async function loadSwiperMovies() {
         if (state.swiperMovies.length > 0) {
             displaySwiperMovie();
         } else {
-            console.log('⚠️ Plus de films disponibles, réinitialisation du cache...');
             state.seenMovieIds.clear();
             watchedIds.forEach(id => state.seenMovieIds.add(id));
             watchlistIds.forEach(id => state.seenMovieIds.add(id));
@@ -137,13 +129,12 @@ function getRecommendationPhase(watchedCount) {
 }
 
 async function loadColdStartMovies(watchedMovies) {
-    console.log('🌟 Cold Start - Films populaires diversifiés');
     
     const mix = RECOMMENDATION_STRATEGY.COLD_START_MIX;
     const total = RECOMMENDATION_STRATEGY.BATCH_SIZE;
     let allMovies = [];
 
-    // 1. Top Rated - Films cultes (30%)
+    // Top Rated - Films cultes (30%)
     const topRatedCount = Math.floor(total * mix.topRated);
     const topRated = await fetchMultiplePages('top_rated', topRatedCount, {
         'vote_count.gte': 1000,
@@ -151,19 +142,19 @@ async function loadColdStartMovies(watchedMovies) {
     });
     allMovies.push(...topRated);
 
-    // 2. Popular - Blockbusters (30%)
+    // Popular - Blockbusters (30%)
     const popularCount = Math.floor(total * mix.popular);
     const popular = await fetchMultiplePages('popular', popularCount, {
         'vote_count.gte': 500
     });
     allMovies.push(...popular);
 
-    // 3. Trending - Tendances (20%)
+    // Trending - Tendances (20%)
     const trendingCount = Math.floor(total * mix.trending);
     const trending = await fetchTrendingMovies(trendingCount);
     allMovies.push(...trending);
 
-    // 4. Upcoming - Nouveautés (20%)
+    // Upcoming - Nouveautés (20%)
     const upcomingCount = Math.floor(total * mix.upcoming);
     const upcoming = await fetchUpcomingMovies(upcomingCount);
     allMovies.push(...upcoming);
@@ -171,37 +162,34 @@ async function loadColdStartMovies(watchedMovies) {
     return shuffleArray(removeDuplicates(allMovies));
 }
 
-// ============================================
-// PHASE LEARNING - VERSION AMÉLIORÉE
-// ============================================
+// learning phase
 async function loadLearningMovies(watchedMovies) {
-    console.log('🎓 Learning - Personnalisation progressive');
     
     const mix = RECOMMENDATION_STRATEGY.LEARNING_MIX;
     const total = RECOMMENDATION_STRATEGY.BATCH_SIZE;
     let allMovies = [];
 
     const preferences = await analyzeUserPreferences(watchedMovies);
-    console.log('  🎯 Top 3 genres:', preferences.topGenres.map(g => g.name).join(', '));
+    //console.log('Top 3 genres:', preferences.topGenres.map(g => g.name).join(', '));
 
-    // 1. Personnalisés (40%)
+    // Personnalisés (40%)
     const personalizedCount = Math.floor(total * mix.personalized);
     if (preferences.topGenres.length > 0) {
         const personalized = await fetchPersonalizedByGenres(preferences.topGenres, personalizedCount);
         allMovies.push(...personalized);
     }
 
-    // 2. Popular (20%)
+    // Popular (20%)
     const popularCount = Math.floor(total * mix.popular);
     const popular = await fetchMultiplePages('popular', popularCount, {});
     allMovies.push(...popular);
 
-    // 3. Découverte (20%)
+    // Découverte (20%)
     const diverseCount = Math.floor(total * mix.diverse);
     const diverse = await fetchDiverseMovies(preferences.exploredGenres, diverseCount);
     allMovies.push(...diverse);
 
-    // 4. Trending (20%)
+    // Trending (20%)
     const trendingCount = Math.floor(total * mix.trending);
     const trending = await fetchTrendingMovies(trendingCount);
     allMovies.push(...trending);
@@ -209,35 +197,31 @@ async function loadLearningMovies(watchedMovies) {
     return shuffleArray(removeDuplicates(allMovies));
 }
 
-// ============================================
-// PHASE MATURE - VERSION AMÉLIORÉE
-// ============================================
+// mature phase
 async function loadMatureMovies(watchedMovies) {
-    console.log('🎬 Mature - Recommandations avancées');
     
     const mix = RECOMMENDATION_STRATEGY.MATURE_MIX;
     const total = RECOMMENDATION_STRATEGY.BATCH_SIZE;
     let allMovies = [];
 
     const preferences = await analyzeUserPreferences(watchedMovies);
-    console.log('  🎯 Profil:', preferences.topGenres.map(g => g.name).join(', '));
 
-    // 1. Hautement personnalisés (50%)
+    // Hautement personnalisés (50%)
     const personalizedCount = Math.floor(total * mix.personalized);
     const personalized = await fetchAdvancedPersonalized(preferences, personalizedCount);
     allMovies.push(...personalized);
 
-    // 2. Découverte intelligente (20%)
+    // Découverte intelligente (20%)
     const diverseCount = Math.floor(total * mix.diverse);
     const diverse = await fetchSmartDiverseMovies(preferences, diverseCount);
     allMovies.push(...diverse);
 
-    // 3. Films similaires (15%)
+    // Films similaires (15%)
     const similarCount = Math.floor(total * mix.similar);
     const similar = await fetchSimilarToFavorites(watchedMovies.slice(-10), similarCount);
     allMovies.push(...similar);
 
-    // 4. Trending récents (15%)
+    // Trending récents (15%)
     const trendingCount = Math.floor(total * mix.trending);
     const trending = await fetchTrendingMovies(trendingCount);
     allMovies.push(...trending);
@@ -245,9 +229,7 @@ async function loadMatureMovies(watchedMovies) {
     return shuffleArray(removeDuplicates(allMovies));
 }
 
-// ============================================
-// ANALYSE PRÉFÉRENCES AMÉLIORÉE
-// ============================================
+// pref améliorées
 async function analyzeUserPreferences(watchedMovies) {
     const genreCount = {};
     const decadeCount = {};
@@ -496,10 +478,6 @@ async function fetchSimilarToFavorites(recentWatched, count) {
     }
 }
 
-// ============================================
-// UTILITAIRES
-// ============================================
-
 function shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -529,10 +507,7 @@ function getGenreName(genreId) {
     return genres[genreId] || 'Inconnu';
 }
 
-// ============================================
-// UI ET INTERACTIONS (inchangées)
-// ============================================
-
+// UI
 async function displaySwiperMovie() {
     const container = document.getElementById('swiperContainer');
     const currentMovie = state.swiperMovies[state.swiperIndex];
@@ -547,7 +522,6 @@ async function displaySwiperMovie() {
     const backdrop = currentMovie.backdrop_path ? `${CONFIG.TMDB_IMG_URL}${currentMovie.backdrop_path}` : poster;
     const year = currentMovie.release_date ? currentMovie.release_date.split('-')[0] : '';
     
-    // ✅ NOUVEAU : Récupérer les détails du film pour avoir la durée et la note
     let movieDetails = null;
     try {
         const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${currentMovie.id}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
@@ -561,7 +535,6 @@ async function displaySwiperMovie() {
     const runtime = movieDetails ? formatRuntime(movieDetails.runtime) : '';
     const rating = currentMovie.vote_average ? currentMovie.vote_average.toFixed(1) : '';
     
-    // ✅ NOUVEAU : Récupérer les amis qui ont aimé le film
     const friendsWhoLiked = await getFriendsWhoLikedMovie(currentMovie.id);
 
     let nextMovieHTML = '';
@@ -585,7 +558,6 @@ async function displaySwiperMovie() {
         `;
     }
     
-    // ✅ NOUVEAU : Pastilles des amis
     let friendsBadgesHTML = '';
     if (friendsWhoLiked.length > 0) {
         const visibleFriends = friendsWhoLiked.slice(0, 3); // Max 3 pastilles visibles
@@ -633,7 +605,7 @@ async function displaySwiperMovie() {
                         <h2 class="swiper-title-modern">${currentMovie.title}</h2>
                         <!-- <div class="swiper-year-modern">${year}</div>
                         
-                        ✅ NOUVEAU : Infos du film -->
+                        Infos du film -->
                         <div class="swiper-movie-info">
                             ${year ? `<span class="swiper-info-item">📅 ${year}</span>` : ''}
                             ${runtime ? `<span class="swiper-info-item">⏱️ ${runtime}</span>` : ''}
@@ -644,7 +616,7 @@ async function displaySwiperMovie() {
                         <div class="swiper-poster-modern">
                             <img src="${poster}" alt="${currentMovie.title}">
                             
-                            <!-- ✅ NOUVEAU : Pastilles des amis -->
+                            <!-- Pastilles des amis -->
                             ${friendsBadgesHTML}
                         </div>
                         <div class="swipe-overlay left">
@@ -765,16 +737,12 @@ function setupTinderSwipe() {
         if (!hasMoved && clickDuration < 300) {
             const movieId = parseInt(card.dataset.movieId);
             showMovieDetails(movieId);
-            
-            // ✅ CORRECTION : Détecter mobile et utiliser le bon transform
             const isMobile = window.innerWidth <= 768;
             card.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             
             if (isMobile) {
-                // Sur mobile : pas de translate, juste reset à 0,0
                 card.style.transform = 'translate(0, 0) rotate(0deg)';
             } else {
-                // Sur desktop : centrage avec -50%
                 card.style.transform = 'translate(-50%, -50%) rotate(0deg)';
             }
             
@@ -785,8 +753,6 @@ function setupTinderSwipe() {
             overlayLeft.classList.remove('active');
             overlayRight.classList.remove('active');
             overlayUp.classList.remove('active');
-            
-            // Retirer la transition après l'animation
             setTimeout(() => {
                 card.style.transition = '';
             }, 300);
@@ -802,7 +768,6 @@ function setupTinderSwipe() {
         if (Math.abs(currentY) > Math.abs(currentX) && currentY < -swipeThreshold) {
             action = 'skip';
             animateCardOut(card, 'up');
-            // ✅ Ajouter au cache même si skip
             state.seenMovieIds.add(movieId);
         } else if (currentX < -swipeThreshold) {
             action = 'watchlist';
@@ -868,23 +833,59 @@ async function addToWatchlistSwiper(movieId, title, posterPath) {
         method: 'POST',
         body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: posterPath })
     });
+    
     if (result) {
         state.watchlist.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
         state.seenMovieIds.add(movieId);
         showToast('Ajouté à la watchlist');
-        
-        // ✅ CORRECTION : Vérifier que la fonction existe avant de l'appeler
+        if (!Array.isArray(state.watchlistAllMovies)) {
+            state.watchlistAllMovies = [];
+        }
+        // Récupérer les détails complets du film depuis TMDB
+        let movieDetails = null;
+        try {
+            const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
+            if (response.ok) {
+                movieDetails = await response.json();
+            }
+        } catch (error) {
+            console.error('Erreur chargement détails film:', error);
+        }
+        // Créer l'objet film complet
+        const newMovie = {
+            id: movieId,
+            movie_id: movieId,
+            title: movieDetails?.title || title,
+            poster_path: movieDetails?.poster_path || posterPath,
+            release_date: movieDetails?.release_date || null,
+            genres: movieDetails?.genres || [],
+            added_at: new Date().toISOString(),
+            tmdb_rating: movieDetails?.vote_average || 0,
+            runtime: movieDetails?.runtime || 0
+        };
+        state.watchlistAllMovies.unshift(newMovie);
+        state.watchlistWithDetails = state.watchlistAllMovies;
         if (state.currentView === 'watchlist') {
+            
             if (typeof updateWatchlistGrid === 'function') {
-                updateWatchlistGrid(movieId, 'add', { title, poster_path: posterPath });
+                await updateWatchlistGrid(movieId, 'add', newMovie);
             } else {
-                console.log('⚠️ updateWatchlistGrid non chargée, rechargement liste...');
+                const grid = document.getElementById('watchlistGrid');
+                if (grid) {
+                    grid.innerHTML = '<div class="loading">Mise à jour...</div>';
+                }
+                
                 setTimeout(() => {
                     if (typeof loadWatchlist === 'function') {
-                        loadWatchlist();
+                        loadWatchlist(false);
                     }
                 }, 100);
             }
+        }
+        
+        // Synchroniser avec le cache offline
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            OfflineStorage.syncAllData().catch(err => console.warn('Erreur sync cache:', err));
         }
     }
 }
@@ -894,20 +895,55 @@ async function addToWatchedSwiper(movieId, title, posterPath) {
         method: 'POST',
         body: JSON.stringify({ movie_id: movieId, movie_title: title, movie_poster: posterPath })
     });
+    
     if (result) {
         state.watched.push({ movie_id: movieId, movie_title: title, movie_poster: posterPath });
         state.seenMovieIds.add(movieId);
         showToast('Marqué comme vu');
+        if (!Array.isArray(state.watchedAllMovies)) {
+            state.watchedAllMovies = [];
+        }
         
-        // ✅ CORRECTION : Vérifier que la fonction existe avant de l'appeler
+        // Récupérer les détails complets du film depuis TMDB
+        let movieDetails = null;
+        try {
+            const response = await fetch(`${CONFIG.TMDB_BASE_URL}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=fr-FR`);
+            if (response.ok) {
+                movieDetails = await response.json();
+            }
+        } catch (error) {
+            console.error('Erreur chargement détails film:', error);
+        }
+        
+        // Créer l'objet film complet
+        const newMovie = {
+            id: movieId,
+            movie_id: movieId,
+            title: movieDetails?.title || title,
+            poster_path: movieDetails?.poster_path || posterPath,
+            release_date: movieDetails?.release_date || null,
+            genres: movieDetails?.genres || [],
+            watched_at: new Date().toISOString(),
+            user_rating: null,
+            tmdb_rating: movieDetails?.vote_average || 0,
+            runtime: movieDetails?.runtime || 0
+        };
+        state.watchedAllMovies.unshift(newMovie);
+        state.watchedWithDetails = state.watchedAllMovies;
+        
         if (state.currentView === 'watched') {
+            
             if (typeof updateWatchedGrid === 'function') {
-                updateWatchedGrid(movieId, 'add', { title, poster_path: posterPath });
+                await updateWatchedGrid(movieId, 'add', newMovie);
             } else {
-                console.log('⚠️ updateWatchedGrid non chargée, rechargement liste...');
+                const grid = document.getElementById('watchedGrid');
+                if (grid) {
+                    grid.innerHTML = '<div class="loading">Mise à jour...</div>';
+                }
+                
                 setTimeout(() => {
                     if (typeof loadWatched === 'function') {
-                        loadWatched();
+                        loadWatched(false);
                     }
                 }, 100);
             }
@@ -915,6 +951,11 @@ async function addToWatchedSwiper(movieId, title, posterPath) {
         
         if (state.swiperIndex >= state.swiperMovies.length - 5) {
             await loadMoreAdaptedMovies();
+        }
+        
+        // Synchroniser avec le cache offline
+        if (typeof OfflineStorage !== 'undefined' && OfflineStorage.isEnabled()) {
+            OfflineStorage.syncAllData().catch(err => console.warn('Erreur sync cache:', err));
         }
     }
 }
@@ -940,7 +981,6 @@ async function loadMoreAdaptedMovies() {
         }
         const filtered = newMovies.filter(m => !state.seenMovieIds.has(m.id));
         state.swiperMovies.push(...filtered);
-        console.log(`🎬 ${filtered.length} nouveaux films préchargés`);
     } catch (error) {
         console.error('Erreur préchargement:', error);
     }
@@ -955,11 +995,7 @@ function nextSwiperMovie() {
     }
 }
 
-// ============================================
-// AIDE CONTEXTUELLE DU SWIPER (OVERLAY)
-// ============================================
 function showSwiperHelpModal() {
-    console.log('🎯 Affichage de l\'aide contextuelle compacte...');
     
     // Supprimer l'overlay existant
     const existingOverlay = document.getElementById('swiperHelpOverlay');
@@ -1136,7 +1172,6 @@ function showSwiperHelpModal() {
     `;
 
     document.body.appendChild(overlay);
-    console.log('✅ Overlay ajouté');
     
     // Animer le fond progressivement
     setTimeout(() => {
@@ -1144,7 +1179,6 @@ function showSwiperHelpModal() {
         overlay.style.backdropFilter = 'blur(12px)';
     }, 50);
     
-    // Animations séquentielles
     const animateElement = (id, delay) => {
         setTimeout(() => {
             const el = document.getElementById(id);
@@ -1156,7 +1190,6 @@ function showSwiperHelpModal() {
                 
                 el.style.transform = newTransform;
                 el.style.opacity = '1';
-                console.log(`✨ Animé: ${id}`);
             }
         }, delay);
     };
@@ -1169,7 +1202,6 @@ function showSwiperHelpModal() {
     
     // Fermeture au clic sur l'overlay
     overlay.addEventListener('click', (e) => {
-        console.log('🖱️ Clic détecté sur overlay');
         closeSwiperHelpModal();
     });
     
@@ -1185,10 +1217,8 @@ function showSwiperHelpModal() {
 }
 
 function closeSwiperHelpModal() {
-    console.log('🔒 Fermeture de l\'aide...');
     const overlay = document.getElementById('swiperHelpOverlay');
     if (!overlay) {
-        console.log('⚠️ Overlay déjà fermé');
         return;
     }
     
@@ -1212,13 +1242,10 @@ function closeSwiperHelpModal() {
     overlay.style.background = 'rgba(0, 0, 0, 0)';
     overlay.style.backdropFilter = 'blur(0px)';
     
-    // Supprimer après les animations
     setTimeout(() => {
         overlay.remove();
-        console.log('✅ Aide fermée');
     }, 700);
 }
-// Animation de fermeture
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeOut {

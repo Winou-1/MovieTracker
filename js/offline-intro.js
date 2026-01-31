@@ -1,5 +1,3 @@
-// js/offline-intro.js - Gestion de l'intro mode offline
-
 function createOfflineIntro() {
     return `
     <div class="offline-intro-container">
@@ -74,7 +72,6 @@ function createOfflineIntro() {
 }
 
 function showOfflineIntro() {
-    // Créer une section pour l'intro offline
     let introSection = document.getElementById('offlineIntroSection');
     
     if (!introSection) {
@@ -98,10 +95,8 @@ function checkConnectionStatus() {
     const isOnline = navigator.onLine;
     const hasToken = !!localStorage.getItem('token');
     
-    console.log('🔍 Vérification connexion:', { isOnline, hasToken });
     
     if (!isOnline && hasToken) {
-        console.log('📡 Mode offline détecté, affichage intro');
         return true;
     }
     

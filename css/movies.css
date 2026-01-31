@@ -1,5 +1,4 @@
 
-/* ==================== MOVIES GRID ==================== */
 .movies-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -79,7 +78,6 @@
 
 
 
-/* Widget Recherche Flottant */
 .search-widget {
     position: fixed;
     bottom: 105px;
@@ -91,19 +89,17 @@
     display: flex;
     align-items: center;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    z-index: 900; /* Juste en dessous des modales (qui sont souvent à 1000+) */
+    z-index: 900;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     width: 50px;
     overflow: hidden;
 }
 
-/* État ouvert (ajouté par JS) */
 .search-widget.active {
-    width: 300px; /* Largeur allongée */
+    width: 300px;
     background: #2a2f35;
 }
 
-/* Le champ texte */
 .search-input {
     width: 100%;
     border: none;
@@ -112,19 +108,19 @@
     padding-left: 15px;
     outline: none;
     font-size: 16px;
-    opacity: 0; /* Caché au début */
+    opacity: 0;
     transition: opacity 0.3s ease;
 }
 
 .search-widget.active .search-input {
-    opacity: 1; /* Visible quand ouvert */
+    opacity: 1;
 }
 
 /* Le bouton rond avec la loupe */
 .search-btn {
     width: 40px;
     height: 40px;
-    background: #667eea; /* Ta couleur principale */
+    background: #667eea;
     border: none;
     border-radius: 50%;
     color: white;
@@ -132,7 +128,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Empêche le bouton de s'écraser */
+    flex-shrink: 0;
     position: absolute;
     right: 5px;
 }
